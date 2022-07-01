@@ -4,7 +4,7 @@
 
 <BR>
 
-Some scenarios where it can be useful:
+Some scenarios where it can be useful (eventually):
 
 * Looking up info on a specific board game
 * Checking out board games of a specific genre, that support a high-player count or that contain a particular mechanic, and rank them based on user ranking or date of publishing
