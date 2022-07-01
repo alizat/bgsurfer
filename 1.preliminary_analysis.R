@@ -202,7 +202,7 @@ dta %>%
 print(glue(''))
 dta %>% 
   mutate(avg_rating_rounded = round(avg_rating*2) / 2) %>% 
-  select(names, year, rank, num_votes, avg_rating_rounded) %>% 
+  select(names, rank, num_votes, avg_rating_rounded) %>% 
   arrange(rank) %>% 
   print(n = 50)
 
@@ -213,7 +213,13 @@ dta %>%
 print(glue('\n\n\n\n*** Complexity ***\n\n'))
 dta %>% 
   select(names, weight) %>% 
-  mutate(weight = round(weight * 2) / 2) %>% 
-  count(weight) %>%
+  mutate(weight_rounded = round(weight * 2) / 2) %>% 
+  count(weight_rounded) %>%
   print()
+print(glue(''))
+dta %>% 
+  mutate(weight_rounded = round(weight * 2) / 2) %>% 
+  select(names, rank, weight_rounded) %>% 
+  arrange(rank) %>% 
+  print(n = 50)
 
