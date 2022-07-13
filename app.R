@@ -44,13 +44,7 @@ ui <- fluidPage(
   sidebarLayout(
     
     sidebarPanel(
-      numericInput(
-        inputId = 'topk', 
-        label = 'Top K games to analyze', 
-        min = 0, 
-        max = 5000, 
-        value = 100
-      ),
+      h3('Features'),
       pickerInput(
         inputId = 'selected_cols', 
         label = 'Features of Interest', 
@@ -66,6 +60,13 @@ ui <- fluidPage(
       ),
       br(),
       h3('Filters'),
+      numericInput(
+        inputId = 'rank', 
+        label = 'Rank (at most)', 
+        min = 0, 
+        max = 5000, 
+        value = 1000
+      ),
       pickerInput(
         inputId = 'selected_categories', 
         label = 'Categories', 
@@ -101,17 +102,19 @@ ui <- fluidPage(
           br(),
           fluidRow(
             column(width = 6, DTOutput('games_counts_categories')),
-            column(width = 6, htmlOutput('txt_highlighted_categories'))
+            column(width = 3, htmlOutput('txt_highlighted_categories')),
+            column(width = 3, 
+                   radioButtons(
+                     inputId  = 'rb_any_or_all_categories', 
+                     label    = 'Games below to contain...', 
+                     choices  = c('all highlighted categories', 'any highlighted categories'), 
+                     selected = 'all highlighted categories'
+                   ),
+                   textOutput('num_games_categories_selected')
+            )
           ),
           br(),
-          br(),
-          radioButtons(
-            inputId  = 'rb_any_or_all_categories', 
-            label    = 'Games below to contain...', 
-            choices  = c('any highlighted categories', 'all highlighted categories'), 
-            selected = 'any highlighted categories'
-          ),
-          br(),
+          hr(),
           br(),
           DTOutput('games_list_categories')
         ),
@@ -125,17 +128,19 @@ ui <- fluidPage(
           br(),
           fluidRow(
             column(width = 6, DTOutput('games_counts_mechanics')),
-            column(width = 6, htmlOutput('txt_highlighted_mechanics'))
+            column(width = 3, htmlOutput('txt_highlighted_mechanics')),
+            column(width = 3, 
+                   radioButtons(
+                     inputId  = 'rb_any_or_all_mechanics', 
+                     label    = 'Games below to contain...',  
+                     choices  = c('all highlighted mechanics', 'any highlighted mechanics'), 
+                     selected = 'all highlighted mechanics'
+                   ),
+                   textOutput('num_games_mechanics_selected')
+            )
           ),
           br(),
-          br(),
-          radioButtons(
-            inputId  = 'rb_any_or_all_mechanics', 
-            label    = 'Games below to contain...', 
-            choices  = c('any highlighted mechanics', 'all highlighted mechanics'), 
-            selected = 'any highlighted mechanics'
-          ),
-          br(),
+          hr(),
           br(),
           DTOutput('games_list_mechanics')
         ),
@@ -163,6 +168,7 @@ server <- function(input, output, session) {
   dta <- read_csv('data/1.mrpantherson/bgg_db_1806.csv')
   dta_reactive <- reactive({
     dta %>% 
+      filter(rank <= input$rank) %>%
       filter(category %>% str_detect(input$selected_categories %>% paste(collapse = '|'))) %>% 
       filter(mechanic %>% str_detect(input$selected_mechanics  %>% paste(collapse = '|')))
   })
@@ -190,10 +196,9 @@ server <- function(input, output, session) {
   category_counts <- reactive({
     cat_counts <- tibble(category = categories, number_of_games = 0)
     for (current_category in categories) {
-      if (current_category %in% dta_reactive()$category) {
+      if (any(dta_reactive()$category %>% str_detect(current_category))) {
         cat_counts$number_of_games[cat_counts$category == current_category] <-
           dta_reactive() %>%
-          head(input$topk) %>%
           filter(category %>% str_detect(current_category)) %>%
           pull(game_id) %>%
           n_distinct()
@@ -221,11 +226,38 @@ server <- function(input, output, session) {
     ))
   })
   
-  output$games_list_categories <- renderDT({
+  categories_selected <- reactive({
     selected_categories <- 
       category_counts()$category[input$games_counts_categories_rows_selected]
-    
+    selected_categories
+  })
+  
+  categories_selected_games <- reactive({
+    selected_categories <- categories_selected()
     selected_games <- c()
+    if (length(selected_categories) > 0) {
+      if (input$rb_any_or_all_categories == 'any highlighted categories') {
+        selected_games <- 
+          dta_reactive() %>% 
+          filter(category %>% str_detect(selected_categories %>% paste(collapse = '|'))) %>% 
+          pull(names)
+      } else if (input$rb_any_or_all_categories == 'all highlighted categories') {
+        selected_games <- dta_reactive()
+        for (current_category in selected_categories) {
+          selected_games <- 
+            selected_games %>% 
+            filter(category %>% str_detect(current_category))
+        }
+        selected_games <- selected_games %>% pull(names)
+      }
+    }
+    
+    selected_games
+  })
+  
+  output$games_list_categories <- renderDT({
+    selected_categories <- categories_selected()
+    selected_games <- categories_selected_games()
     if (length(selected_categories) > 0) {
       if (input$rb_any_or_all_categories == 'any highlighted categories') {
         selected_games <- 
@@ -245,7 +277,6 @@ server <- function(input, output, session) {
     
     if (length(selected_games) > 0) {
       dta_compact() %>% 
-        head(input$topk) %>% 
         filter(names %in% selected_games) %>% 
         header_renamer() %>% 
         datatable(filter = 'top',
@@ -257,6 +288,11 @@ server <- function(input, output, session) {
     }
   })
   
+  output$num_games_categories_selected <- renderText({
+    req(categories_selected_games())
+    categories_selected_games() %>% length() %>% paste('games')
+  })
+  
   ## *******
   
   ## MECHANICS
@@ -264,10 +300,9 @@ server <- function(input, output, session) {
   mechanic_counts <- reactive({
     mech_counts <- tibble(mechanic = mechanics, number_of_games = 0)
     for (current_mechanic in mechanics) {
-      if (current_mechanic %in% dta_reactive()$mechanic) {
+      if (any(dta_reactive()$mechanic %>% str_detect(current_mechanic))) {
         mech_counts$number_of_games[mech_counts$mechanic == current_mechanic] <-
           dta_reactive() %>%
-          head(input$topk) %>%
           filter(mechanic %>% str_detect(current_mechanic)) %>%
           pull(game_id) %>%
           n_distinct()
@@ -295,11 +330,38 @@ server <- function(input, output, session) {
     ))
   })
   
-  output$games_list_mechanics <- renderDT({
+  mechanics_selected <- reactive({
     selected_mechanics <- 
       mechanic_counts()$mechanic[input$games_counts_mechanics_rows_selected]
-    
+    selected_mechanics
+  })
+  
+  mechanics_selected_games <- reactive({
+    selected_mechanics <- mechanics_selected()
     selected_games <- c()
+    if (length(selected_mechanics) > 0) {
+      if (input$rb_any_or_all_mechanics == 'any highlighted mechanics') {
+        selected_games <- 
+          dta_reactive() %>% 
+          filter(mechanic %>% str_detect(selected_mechanics %>% paste(collapse = '|'))) %>% 
+          pull(names)
+      } else if (input$rb_any_or_all_mechanics == 'all highlighted mechanics') {
+        selected_games <- dta_reactive()
+        for (current_mechanic in selected_mechanics) {
+          selected_games <- 
+            selected_games %>% 
+            filter(mechanic %>% str_detect(current_mechanic))
+        }
+        selected_games <- selected_games %>% pull(names)
+      }
+    }
+    
+    selected_games
+  })
+  
+  output$games_list_mechanics <- renderDT({
+    selected_mechanics <- mechanics_selected()
+    selected_games <- mechanics_selected_games()
     if (length(selected_mechanics) > 0) {
       if (input$rb_any_or_all_mechanics == 'any highlighted mechanics') {
         selected_games <- 
@@ -319,7 +381,6 @@ server <- function(input, output, session) {
     
     if (length(selected_games) > 0) {
       dta_compact() %>% 
-        head(input$topk) %>% 
         filter(names %in% selected_games) %>% 
         header_renamer() %>% 
         datatable(filter = 'top',
@@ -329,6 +390,11 @@ server <- function(input, output, session) {
                     columnDefs = list(list(width = '8%', targets = c(1,3,4,5,7)))
                   ))
     }
+  })
+  
+  output$num_games_mechanics_selected <- renderText({
+    req(mechanics_selected_games())
+    mechanics_selected_games() %>% length() %>% paste('games')
   })
   
   ## *******
