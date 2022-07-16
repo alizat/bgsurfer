@@ -56,6 +56,10 @@ ui <- fluidPage(
                      'num_votes',
                      'designer', 
                      'weight') %>% set_names(col_renamer(.)), 
+        options = list(`actions-box` = TRUE,
+                       `selected-text-format`= "count",
+                       `count-selected-text` = "{0} features (out of {1})",
+                       `none-selected-text` = "None selected"), 
         multiple = TRUE
       ),
       br(),
@@ -72,6 +76,10 @@ ui <- fluidPage(
         label = 'Categories', 
         choices = categories, 
         selected = categories, 
+        options = list(`actions-box` = TRUE,
+                       `selected-text-format`= "count",
+                       `count-selected-text` = "{0} categories (out of {1})",
+                       `none-selected-text` = "None selected"), 
         multiple = TRUE
       ),
       pickerInput(
@@ -79,6 +87,10 @@ ui <- fluidPage(
         label = 'Mechanics', 
         choices = mechanics, 
         selected = mechanics, 
+        options = list(`actions-box` = TRUE,
+                       `selected-text-format`= "count",
+                       `count-selected-text` = "{0} mechanics (out of {1})",
+                       `none-selected-text` = "None selected"), 
         multiple = TRUE
       ),
       width = 3
@@ -212,7 +224,7 @@ server <- function(input, output, session) {
       header_renamer() %>% 
       datatable(rownames = FALSE,
                 options = list(dom = 'tip')) %>% 
-      formatStyle(c('Category', 'Number Of Games'), lineHeight = '40%')
+      formatStyle(1:ncol(category_counts()), lineHeight = '40%')
   })
   
   output$txt_highlighted_categories <- renderUI({
@@ -316,7 +328,7 @@ server <- function(input, output, session) {
       header_renamer() %>% 
       datatable(rownames = FALSE,
                 options = list(dom = 'tip')) %>% 
-      formatStyle(c('Mechanic', 'Number Of Games'), lineHeight = '40%')
+      formatStyle(1:ncol(mechanic_counts()), lineHeight = '40%')
   })
   
   output$txt_highlighted_mechanics <- renderUI({
