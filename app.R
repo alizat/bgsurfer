@@ -48,7 +48,10 @@ ui <- fluidPage(
       pickerInput(
         inputId = 'selected_cols', 
         label = 'Features of Interest', 
-        choices = colnames(dta) %>% set_names(col_renamer(.)), 
+        choices = 
+          colnames(dta) %>% 
+          set_names(col_renamer(.)) %>% 
+          c('Num Categories', 'Num Mechanics', 'Num Designers'), 
         selected = c('rank',
                      'names',
                      'year',
@@ -179,10 +182,25 @@ server <- function(input, output, session) {
   
   dta <- read_csv('data/1.mrpantherson/bgg_db_1806.csv')
   dta_reactive <- reactive({
-    dta %>% 
+    df <- 
+      dta %>% 
       filter(rank <= input$rank) %>%
       filter(category %>% str_detect(input$selected_categories %>% paste(collapse = '|'))) %>% 
       filter(mechanic %>% str_detect(input$selected_mechanics  %>% paste(collapse = '|')))
+    
+    count_categories <- function(x) {
+      x %>% 
+        str_split(', ') %>% 
+        map_dbl(~ .x %>% length())
+    }
+    
+    df <- 
+      df %>% 
+      mutate(`Num Categories` = count_categories(category),
+             `Num Mechanics`  = count_categories(mechanic),
+             `Num Designers`  = count_categories(designer))
+    
+    df
   })
   dta_compact <- reactive({
     dta_reactive() %>% select(all_of(input$selected_cols))
@@ -288,15 +306,23 @@ server <- function(input, output, session) {
     }
     
     if (length(selected_games) > 0) {
-      dta_compact() %>% 
+      display_me <- 
+        dta_compact() %>% 
         filter(names %in% selected_games) %>% 
-        header_renamer() %>% 
+        header_renamer()
+      numeric_variables_indices <- 
+        display_me %>% 
+        map_lgl(~ is.numeric(.x)) %>% 
+        which() %>% 
+        unname()
+      display_me %>% 
         datatable(filter = 'top',
                   rownames = '',
                   options = list(
                     dom = 'tip',
-                    columnDefs = list(list(width = '8%', targets = c(1,3,4,5,7)))
-                  ))
+                    columnDefs = list(list(width = '8%', targets = numeric_variables_indices))
+                  )
+        )
     }
   })
   
@@ -392,15 +418,23 @@ server <- function(input, output, session) {
     }
     
     if (length(selected_games) > 0) {
-      dta_compact() %>% 
+      display_me <- 
+        dta_compact() %>% 
         filter(names %in% selected_games) %>% 
-        header_renamer() %>% 
+        header_renamer()
+      numeric_variables_indices <- 
+        display_me %>% 
+        map_lgl(~ is.numeric(.x)) %>% 
+        which() %>% 
+        unname()
+      display_me %>% 
         datatable(filter = 'top',
                   rownames = '',
                   options = list(
                     dom = 'tip',
-                    columnDefs = list(list(width = '8%', targets = c(1,3,4,5,7)))
-                  ))
+                    columnDefs = list(list(width = '8%', targets = numeric_variables_indices))
+                  )
+        )
     }
   })
   
