@@ -35,6 +35,9 @@ col_renamer <- function(col_header_names) {
     map_chr(~ .x %>% str_split('_') %>% unlist() %>% paste(collapse = ' ')) %>% 
     str_to_title()
 }
+p25 <- function(x) {quantile(x, probs = 0.25, na.rm = TRUE)}
+p50 <- function(x) {quantile(x, probs = 0.50, na.rm = TRUE)}
+p75 <- function(x) {quantile(x, probs = 0.75, na.rm = TRUE)}
 
 
 ui <- fluidPage(
@@ -44,7 +47,9 @@ ui <- fluidPage(
   sidebarLayout(
     
     sidebarPanel(
+      
       h3('Features'),
+      
       pickerInput(
         inputId = 'selected_cols', 
         label = 'Features of Interest', 
@@ -65,8 +70,11 @@ ui <- fluidPage(
                        `none-selected-text` = "None selected"), 
         multiple = TRUE
       ),
+      
       br(),
       h3('Filters'),
+      
+      ## rank filter
       numericInput(
         inputId = 'rank', 
         label = 'Rank (at most)', 
@@ -74,6 +82,8 @@ ui <- fluidPage(
         max = 5000, 
         value = 1000
       ),
+      
+      ## categories filter
       pickerInput(
         inputId = 'selected_categories', 
         label = 'Categories', 
@@ -85,6 +95,8 @@ ui <- fluidPage(
                        `none-selected-text` = "None selected"), 
         multiple = TRUE
       ),
+      
+      ## mechanics filter
       pickerInput(
         inputId = 'selected_mechanics', 
         label = 'Mechanics', 
@@ -96,6 +108,7 @@ ui <- fluidPage(
                        `none-selected-text` = "None selected"), 
         multiple = TRUE
       ),
+      
       width = 3
     ),
     
@@ -108,62 +121,62 @@ ui <- fluidPage(
           DTOutput('games_list')
         ),
         
-        ## Categories
+        ## EDA
         tabPanel(
-          'Categories',
-          br(),
-          helpText('Highlight categories to see relevant games.'),
-          helpText('If multiple categories are highlighted, you may select whether games are to have one or all of the higlighted categories'),
+          'EDA',
           br(),
           fluidRow(
-            column(width = 6, DTOutput('games_counts_categories')),
-            column(width = 3, htmlOutput('txt_highlighted_categories')),
-            column(width = 3, 
-                   radioButtons(
-                     inputId  = 'rb_any_or_all_categories', 
-                     label    = 'Games below to contain...', 
-                     choices  = c('all highlighted categories', 'any highlighted categories'), 
-                     selected = 'all highlighted categories'
-                   ),
-                   textOutput('num_games_categories_selected')
-            )
+            column(width = 4,
+                   selectInput(
+                     inputId  = 'x_eda',
+                     label    = 'X',
+                     choices  = c('year', 'mechanic', 'category'),
+                     selected = 'year',
+                     multiple = FALSE)),
+            column(width = 4,
+                   selectInput(
+                     inputId  = 'y_eda',
+                     label    = 'Y',
+                     choices  = c('count', dta %>% select_if(is.numeric) %>% colnames()),
+                     selected = 'count',
+                     multiple = FALSE)),
+            column(width = 4, uiOutput('agg_control'))
           ),
-          br(),
-          hr(),
-          br(),
-          DTOutput('games_list_categories')
-        ),
-        
-        ## Mechanics
-        tabPanel(
-          'Mechanics',
-          br(),
-          helpText('Highlight mechanics to see relevant games.'),
-          helpText('If multiple mechanics are highlighted, you may select whether games are to have one or all of the higlighted mechanics'),
-          br(),
-          fluidRow(
-            column(width = 6, DTOutput('games_counts_mechanics')),
-            column(width = 3, htmlOutput('txt_highlighted_mechanics')),
-            column(width = 3, 
-                   radioButtons(
-                     inputId  = 'rb_any_or_all_mechanics', 
-                     label    = 'Games below to contain...',  
-                     choices  = c('all highlighted mechanics', 'any highlighted mechanics'), 
-                     selected = 'all highlighted mechanics'
-                   ),
-                   textOutput('num_games_mechanics_selected')
+
+          tabsetPanel(
+            tabPanel(
+              'Table',
+              br(),
+              HTML('<center>'),
+              DTOutput('table_eda'),  #, width = '80%'
+              HTML('</center>'),
+              br(),
+              hr(),
+              br(),
+              fluidRow(
+                column(width = 3,
+                       radioButtons(
+                         inputId  = 'rb_any_or_all_values',
+                         label    = 'Games below to contain...',
+                         choices  = c('any highlighted values', 'all highlighted values'),
+                         selected = 'any highlighted values'
+                       ),
+                       textOutput('num_games_values_selected')
+                ),
+                column(width = 9, htmlOutput('txt_highlighted_values'))
+              ),
+              
+              DTOutput('table_breakdown_eda')
+            ),
+            tabPanel(
+              'Visual',
+              plotOutput('viz_eda')
             )
-          ),
-          br(),
-          hr(),
-          br(),
-          DTOutput('games_list_mechanics')
+          )
         ),
-        
-        ## Designers
-        tabPanel('Designers')
         
       ),
+      
       width = 9
     )
     
@@ -221,101 +234,122 @@ server <- function(input, output, session) {
   
   ## *******
   
-  ## CATEGORIES
+  table_eda_df <- reactive({
+    
+    df <- dta_reactive()
+    
+    if (input$x_eda %in% c('category', 'mechanic'))
+      df <- df %>% separate_rows(!!input$x_eda, sep = ', ')
+    
+    if (input$y_eda == 'count') {
+      df %>% count(across(all_of(input$x_eda)), name = 'Count')
+      
+    } else {
+      df <- 
+        df %>% 
+        select(all_of(c(input$x_eda, input$y_eda))) %>% 
+        group_by(across(all_of(input$x_eda))) %>% 
+        summarise(across(all_of(input$y_eda), c(min, p25, p50, mean, p75, max))) %>% 
+        ungroup()
+      
+      colnames(df)[2:ncol(df)] <- 
+        colnames(df)[2:ncol(df)] %>% 
+        str_replace('_[1-9]+$', glue("_[{c('min', 'Q1', 'median', 'avg', 'Q3', 'max')}]"))
+      
+      df
+    }
+  })
   
-  category_counts <- reactive({
-    cat_counts <- tibble(category = categories, number_of_games = 0)
-    for (current_category in categories) {
-      if (any(dta_reactive()$category %>% str_detect(current_category))) {
-        cat_counts$number_of_games[cat_counts$category == current_category] <-
-          dta_reactive() %>%
-          filter(category %>% str_detect(current_category)) %>%
-          pull(game_id) %>%
-          n_distinct()
+  output$table_eda <- renderDT({
+    display_me = table_eda_df()
+    colnames(display_me) <- 
+      colnames(display_me) %>% 
+      str_split('_') %>% 
+      map_chr(~ .x %>% unlist() %>% paste(collapse = ' ')) %>% 
+      str_to_title()
+    display_me <- 
+      display_me %>% 
+      mutate_if(is.numeric, round, digits = 1)
+    display_me %>% 
+      datatable(
+        filter = 'top',
+        rownames = FALSE,
+        options = list(
+          dom = 'tip',
+          columnDefs = list(
+            list(className = 'dt-center', targets = '_all'),
+            list(width = '30%', targets = 0)
+          )
+        )
+      ) %>% 
+      formatStyle(1:ncol(display_me), lineHeight = '40%')
+  })
+
+  values_selected <- reactive({
+    selected_values <-
+      table_eda_df()[input$table_eda_rows_selected,1] %>% pull()
+    selected_values
+  })
+
+  values_selected_games <- reactive({
+    selected_values <- values_selected()
+    selected_games <- c()
+    if (length(selected_values) > 0) {
+      if (input$rb_any_or_all_values == 'any highlighted values') {
+        selected_games <- dta_reactive()
+        selected_games <-
+          selected_games %>%
+          filter(
+            as.character(selected_games[[input$x_eda]]) %>% str_detect(selected_values %>% paste(collapse = '|'))
+          ) %>%
+          pull(names)
+      } else if (input$rb_any_or_all_values == 'all highlighted values') {
+        selected_games <- dta_reactive()
+        for (current_value in selected_values) {
+          selected_games <-
+            selected_games %>%
+            filter(
+              as.character(selected_games[[input$x_eda]]) %>% str_detect(as.character(current_value))
+            )
+        }
+        selected_games <- selected_games %>% pull(names)
       }
     }
-    cat_counts
+
+    selected_games
   })
-  
-  output$games_counts_categories <- renderDT({
-    category_counts() %>%
-      header_renamer() %>% 
-      datatable(rownames = FALSE,
-                options = list(dom = 'tip')) %>% 
-      formatStyle(1:ncol(category_counts()), lineHeight = '40%')
-  })
-  
-  output$txt_highlighted_categories <- renderUI({
+
+  output$txt_highlighted_values <- renderUI({
     HTML(glue(
       '
       <center>
-      <H3>Highlighted Categories</H3>
-      {unique(category_counts()[input$games_counts_categories_rows_selected,]$category) %>% paste(collapse = "<BR>")}
+      <H4>Highlighted values</H4>
+      {unique(table_eda_df()[input$table_eda_rows_selected,1] %>% pull()) %>% paste(collapse = ", ")}
       </center>
       '
     ))
   })
-  
-  categories_selected <- reactive({
-    selected_categories <- 
-      category_counts()$category[input$games_counts_categories_rows_selected]
-    selected_categories
+
+  output$num_games_values_selected <- renderText({
+    req(values_selected_games())
+    values_selected_games() %>% length() %>% paste('games')
   })
-  
-  categories_selected_games <- reactive({
-    selected_categories <- categories_selected()
-    selected_games <- c()
-    if (length(selected_categories) > 0) {
-      if (input$rb_any_or_all_categories == 'any highlighted categories') {
-        selected_games <- 
-          dta_reactive() %>% 
-          filter(category %>% str_detect(selected_categories %>% paste(collapse = '|'))) %>% 
-          pull(names)
-      } else if (input$rb_any_or_all_categories == 'all highlighted categories') {
-        selected_games <- dta_reactive()
-        for (current_category in selected_categories) {
-          selected_games <- 
-            selected_games %>% 
-            filter(category %>% str_detect(current_category))
-        }
-        selected_games <- selected_games %>% pull(names)
-      }
-    }
-    
-    selected_games
-  })
-  
-  output$games_list_categories <- renderDT({
-    selected_categories <- categories_selected()
-    selected_games <- categories_selected_games()
-    if (length(selected_categories) > 0) {
-      if (input$rb_any_or_all_categories == 'any highlighted categories') {
-        selected_games <- 
-          dta_reactive() %>% 
-          filter(category %>% str_detect(selected_categories %>% paste(collapse = '|'))) %>% 
-          pull(names)
-      } else if (input$rb_any_or_all_categories == 'all highlighted categories') {
-        selected_games <- dta_reactive()
-        for (current_category in selected_categories) {
-          selected_games <- 
-            selected_games %>% 
-            filter(category %>% str_detect(current_category))
-        }
-        selected_games <- selected_games %>% pull(names)
-      }
-    }
-    
+
+  output$table_breakdown_eda <- renderDT({
+    selected_categories <- values_selected()
+    selected_games <- values_selected_games()
+
     if (length(selected_games) > 0) {
-      display_me <- 
-        dta_compact() %>% 
-        filter(names %in% selected_games) %>% 
+      display_me <-
+        dta_compact() %>%
+        filter(names %in% selected_games) %>%
         header_renamer()
-      numeric_variables_indices <- 
-        display_me %>% 
-        map_lgl(~ is.numeric(.x)) %>% 
-        which() %>% 
+      numeric_variables_indices <-
+        display_me %>%
+        map_lgl(~ is.numeric(.x)) %>%
+        which() %>%
         unname()
-      display_me %>% 
+      display_me %>%
         datatable(filter = 'top',
                   rownames = '',
                   options = list(
@@ -325,128 +359,6 @@ server <- function(input, output, session) {
         )
     }
   })
-  
-  output$num_games_categories_selected <- renderText({
-    req(categories_selected_games())
-    categories_selected_games() %>% length() %>% paste('games')
-  })
-  
-  ## *******
-  
-  ## MECHANICS
-  
-  mechanic_counts <- reactive({
-    mech_counts <- tibble(mechanic = mechanics, number_of_games = 0)
-    for (current_mechanic in mechanics) {
-      if (any(dta_reactive()$mechanic %>% str_detect(current_mechanic))) {
-        mech_counts$number_of_games[mech_counts$mechanic == current_mechanic] <-
-          dta_reactive() %>%
-          filter(mechanic %>% str_detect(current_mechanic)) %>%
-          pull(game_id) %>%
-          n_distinct()
-      }
-    }
-    mech_counts
-  })
-  
-  output$games_counts_mechanics <- renderDT({
-    mechanic_counts() %>%
-      header_renamer() %>% 
-      datatable(rownames = FALSE,
-                options = list(dom = 'tip')) %>% 
-      formatStyle(1:ncol(mechanic_counts()), lineHeight = '40%')
-  })
-  
-  output$txt_highlighted_mechanics <- renderUI({
-    HTML(glue(
-      '
-      <center>
-      <H3>Highlighted Mechanics</H3>
-      {unique(mechanic_counts()[input$games_counts_mechanics_rows_selected,]$mechanic) %>% paste(collapse = "<BR>")}
-      </center>
-      '
-    ))
-  })
-  
-  mechanics_selected <- reactive({
-    selected_mechanics <- 
-      mechanic_counts()$mechanic[input$games_counts_mechanics_rows_selected]
-    selected_mechanics
-  })
-  
-  mechanics_selected_games <- reactive({
-    selected_mechanics <- mechanics_selected()
-    selected_games <- c()
-    if (length(selected_mechanics) > 0) {
-      if (input$rb_any_or_all_mechanics == 'any highlighted mechanics') {
-        selected_games <- 
-          dta_reactive() %>% 
-          filter(mechanic %>% str_detect(selected_mechanics %>% paste(collapse = '|'))) %>% 
-          pull(names)
-      } else if (input$rb_any_or_all_mechanics == 'all highlighted mechanics') {
-        selected_games <- dta_reactive()
-        for (current_mechanic in selected_mechanics) {
-          selected_games <- 
-            selected_games %>% 
-            filter(mechanic %>% str_detect(current_mechanic))
-        }
-        selected_games <- selected_games %>% pull(names)
-      }
-    }
-    
-    selected_games
-  })
-  
-  output$games_list_mechanics <- renderDT({
-    selected_mechanics <- mechanics_selected()
-    selected_games <- mechanics_selected_games()
-    if (length(selected_mechanics) > 0) {
-      if (input$rb_any_or_all_mechanics == 'any highlighted mechanics') {
-        selected_games <- 
-          dta_reactive() %>% 
-          filter(mechanic %>% str_detect(selected_mechanics %>% paste(collapse = '|'))) %>% 
-          pull(names)
-      } else if (input$rb_any_or_all_mechanics == 'all highlighted mechanics') {
-        selected_games <- dta_reactive()
-        for (current_mechanic in selected_mechanics) {
-          selected_games <- 
-            selected_games %>% 
-            filter(mechanic %>% str_detect(current_mechanic))
-        }
-        selected_games <- selected_games %>% pull(names)
-      }
-    }
-    
-    if (length(selected_games) > 0) {
-      display_me <- 
-        dta_compact() %>% 
-        filter(names %in% selected_games) %>% 
-        header_renamer()
-      numeric_variables_indices <- 
-        display_me %>% 
-        map_lgl(~ is.numeric(.x)) %>% 
-        which() %>% 
-        unname()
-      display_me %>% 
-        datatable(filter = 'top',
-                  rownames = '',
-                  options = list(
-                    dom = 'tip',
-                    columnDefs = list(list(width = '8%', targets = numeric_variables_indices))
-                  )
-        )
-    }
-  })
-  
-  output$num_games_mechanics_selected <- renderText({
-    req(mechanics_selected_games())
-    mechanics_selected_games() %>% length() %>% paste('games')
-  })
-  
-  ## *******
-  
-  ## DESIGNERS
-  
   
 }
 
