@@ -360,6 +360,18 @@ server <- function(input, output, session) {
     }
   })
   
+  output$viz_eda <- renderPlot({
+    if (input$y_eda == 'count') {
+      table_eda_df() %>% 
+        mutate(across(all_of(input$x_eda), factor)) %>% 
+        arrange(Count) %>% 
+        tail(10) %>% 
+        ggplot(aes_string(input$x_eda, 'Count')) +
+        # ggplot(aes(year, Count)) + 
+        geom_bar(stat = 'identity')
+    }
+  })
+  
 }
 
 shinyApp(ui, server)
