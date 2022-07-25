@@ -130,14 +130,14 @@ ui <- fluidPage(
                    selectInput(
                      inputId  = 'x_eda',
                      label    = 'X',
-                     choices  = c('year', 'mechanic', 'category'),
+                     choices  = c('year', 'mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
                      selected = 'year',
                      multiple = FALSE)),
             column(width = 4,
                    selectInput(
                      inputId  = 'y_eda',
                      label    = 'Y',
-                     choices  = c('count', dta %>% select_if(is.numeric) %>% colnames()),
+                     choices  = c('count', dta %>% select_if(is.numeric) %>% colnames()) %>% set_names(col_renamer(.)),
                      selected = 'count',
                      multiple = FALSE)),
             column(width = 4, uiOutput('agg_control'))
@@ -147,14 +147,16 @@ ui <- fluidPage(
             tabPanel(
               'Table',
               br(),
+              helpText('Highlight categories to see relevant games.'),
               HTML('<center>'),
-              DTOutput('table_eda'),  #, width = '80%'
+              DTOutput('table_eda', width = '80%'),
               HTML('</center>'),
               br(),
-              hr(),
               br(),
+              helpText('If multiple categories are highlighted, you may select whether games are to have one or all of the higlighted categories'),
               fluidRow(
                 column(width = 3,
+                       offset = 1,
                        radioButtons(
                          inputId  = 'rb_any_or_all_values',
                          label    = 'Games below to contain...',
@@ -163,13 +165,14 @@ ui <- fluidPage(
                        ),
                        textOutput('num_games_values_selected')
                 ),
-                column(width = 9, htmlOutput('txt_highlighted_values'))
+                column(width = 7, htmlOutput('txt_highlighted_values'))
               ),
               
               DTOutput('table_breakdown_eda')
             ),
             tabPanel(
               'Visual',
+              br(),
               plotOutput('viz_eda')
             )
           )
@@ -238,7 +241,7 @@ server <- function(input, output, session) {
     
     df <- dta_reactive()
     
-    if (input$x_eda %in% c('category', 'mechanic'))
+    if (input$x_eda %in% c('category', 'mechanic', 'designer'))
       df <- df %>% separate_rows(!!input$x_eda, sep = ', ')
     
     if (input$y_eda == 'count') {
@@ -330,10 +333,10 @@ server <- function(input, output, session) {
     ))
   })
 
-  output$num_games_values_selected <- renderText({
-    req(values_selected_games())
-    values_selected_games() %>% length() %>% paste('games')
-  })
+  # output$num_games_values_selected <- renderText({
+  #   req(values_selected_games())
+  #   values_selected_games() %>% length() %>% paste('games')
+  # })
 
   output$table_breakdown_eda <- renderDT({
     selected_categories <- values_selected()
@@ -361,14 +364,27 @@ server <- function(input, output, session) {
   })
   
   output$viz_eda <- renderPlot({
+    req(input$x_eda, input$y_eda)
+    
     if (input$y_eda == 'count') {
-      table_eda_df() %>% 
-        mutate(across(all_of(input$x_eda), factor)) %>% 
+      df <- table_eda_df()
+      if (length(input$x_eda) > 1) {
+        my_x <- input$x_eda %>% paste(collapse = '-')
+        df <- df %>% unite(input$x_eda %>% paste(collapse = '_'))
+      } else {
+        my_x <- input$x_eda
+      }
+      df %>% 
         arrange(Count) %>% 
         tail(10) %>% 
-        ggplot(aes_string(input$x_eda, 'Count')) +
-        # ggplot(aes(year, Count)) + 
-        geom_bar(stat = 'identity')
+        mutate(across(all_of(my_x), ~ factor(.x, levels = .x))) %>% 
+        ggplot(aes_string(my_x, 'Count', fill = 'Count')) +
+        geom_bar(stat = 'identity') + 
+        coord_flip() + 
+        theme(legend.position = 'none') + 
+        labs(title = glue('{col_renamer(input$y_eda)} ~ {col_renamer(input$x_eda)}'),
+             x = glue('{col_renamer(input$x_eda)}'),
+             y = glue('{col_renamer(input$y_eda)}'))
     }
   })
   
