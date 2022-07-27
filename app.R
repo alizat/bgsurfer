@@ -137,7 +137,9 @@ ui <- fluidPage(
                    selectInput(
                      inputId  = 'y_eda',
                      label    = 'Y',
-                     choices  = c('count', dta %>% select_if(is.numeric) %>% colnames()) %>% set_names(col_renamer(.)),
+                     choices  = c('count', 
+                                  dta %>% select_if(is.numeric) %>% colnames(),
+                                  'category', 'mechanic', 'designer') %>% set_names(col_renamer(.)),
                      selected = 'count',
                      multiple = FALSE)),
             column(width = 4, uiOutput('agg_control'))
@@ -173,7 +175,15 @@ ui <- fluidPage(
             tabPanel(
               'Visual',
               br(),
-              plotOutput('viz_eda')
+              selectInput(
+                inputId  = 'plot_type', 
+                label    = 'Plot Type', 
+                choices  = c('Bar chart', 'Pie chart', 'Histogram'), 
+                selected = 'Bar chart', 
+                multiple = FALSE
+              ),
+              br(),
+              plotlyOutput('viz_eda')
             )
           )
         ),
@@ -246,6 +256,20 @@ server <- function(input, output, session) {
     
     if (input$y_eda == 'count') {
       df %>% count(across(all_of(input$x_eda)), name = 'Count')
+      
+    } else if (input$y_eda %in% c('category', 'mechanic', 'designer')) {
+      df <- 
+        df %>% 
+        select(all_of(c(input$x_eda, input$y_eda))) %>% 
+        group_by(across(all_of(input$x_eda))) %>% 
+        summarise(across(all_of(input$y_eda), n_distinct)) %>% 
+        ungroup()
+      
+      colnames(df)[2:ncol(df)] <-
+        colnames(df)[2:ncol(df)] %>%
+        paste('[# unique values]')
+      
+      df
       
     } else {
       df <- 
@@ -363,10 +387,18 @@ server <- function(input, output, session) {
     }
   })
   
-  output$viz_eda <- renderPlot({
+  observeEvent(input$y_eda, {
+    if (input$y_eda == 'count') {
+      updateSelectInput(inputId = 'plot_type', 
+                        choices = c('Bar chart', 'Pie chart', 'Histogram'), 
+                        selected = 'Bar chart')
+    }
+  })
+  
+  output$viz_eda <- renderPlotly({
     req(input$x_eda, input$y_eda)
     
-    if (input$y_eda == 'count') {
+    if (input$y_eda == 'count' && input$plot_type == 'Bar chart') {
       df <- table_eda_df()
       if (length(input$x_eda) > 1) {
         my_x <- input$x_eda %>% paste(collapse = '-')
@@ -374,17 +406,25 @@ server <- function(input, output, session) {
       } else {
         my_x <- input$x_eda
       }
-      df %>% 
+      
+      p <- 
+        df %>% 
         arrange(Count) %>% 
         tail(10) %>% 
         mutate(across(all_of(my_x), ~ factor(.x, levels = .x))) %>% 
-        ggplot(aes_string(my_x, 'Count', fill = 'Count')) +
+        mutate(Info = glue('
+                           <BR>{str_to_title(my_x)}: {get(my_x)}
+                           Count: {Count}
+                           ')) %>% 
+        ggplot(aes_string(my_x, 'Count', fill = 'Count', label = 'Info')) +
         geom_bar(stat = 'identity') + 
         coord_flip() + 
         theme(legend.position = 'none') + 
         labs(title = glue('{col_renamer(input$y_eda)} ~ {col_renamer(input$x_eda)}'),
              x = glue('{col_renamer(input$x_eda)}'),
              y = glue('{col_renamer(input$y_eda)}'))
+      
+      ggplotly(p, tooltip = 'Info')
     }
   })
   
