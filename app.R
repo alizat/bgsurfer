@@ -175,12 +175,20 @@ ui <- fluidPage(
             tabPanel(
               'Visual',
               br(),
-              selectInput(
-                inputId  = 'plot_type', 
-                label    = 'Plot Type', 
-                choices  = c('Bar chart', 'Pie chart', 'Histogram'), 
-                selected = 'Bar chart', 
-                multiple = FALSE
+              fluidRow(
+                column(
+                  width = 3, 
+                  selectInput(
+                    inputId  = 'plot_type', 
+                    label    = 'Plot Type', 
+                    choices  = c('Bar chart', 'Pie chart', 'Histogram'), 
+                    selected = 'Bar chart', 
+                    multiple = FALSE
+                  )
+                ),
+                column(width = 3, uiOutput('plot_supp')),
+                column(width = 3, uiOutput('plot_supp2')),
+                column(width = 3, uiOutput('plot_supp3'))
               ),
               br(),
               plotlyOutput('viz_eda')
@@ -246,6 +254,54 @@ server <- function(input, output, session) {
   })
   
   ## *******
+  
+  output$plot_supp <- renderUI({
+    if (input$y_eda == 'count') {
+      numericInput(
+        inputId = 'top_n', 
+        label   = 'Show Top N', 
+        min     = 1, 
+        max     = 100, 
+        value   = 10
+      )
+    }
+  })
+  
+  # output$plot_supp2 <- renderUI({
+  #   if (input$y_eda == 'count') {
+  #     selectInput(
+  #       inputId  = 'color_by', 
+  #       label    = 'Color by ...', 
+  #       choices  = c('Count', input$x_eda), 
+  #       selected = 'Count', 
+  #       multiple = FALSE
+  #     )
+  #   }
+  # })
+  
+  # output$plot_supp3 <- renderUI({
+  #   if (input$y_eda == 'count') {
+  #     selectInput(
+  #       inputId  = 'color_by', 
+  #       label    = 'Color by ...', 
+  #       choices  = c('Count', input$x_eda), 
+  #       selected = 'Count', 
+  #       multiple = FALSE
+  #     )
+  #   }
+  # })
+  
+  # output$plot_supp4 <- renderUI({
+  #   if (input$y_eda == 'count') {
+  #     selectInput(
+  #       inputId = 'facet_by', 
+  #       label   = 'Facet by ...', 
+  #       choices  = c('mechanic', 'category', 'designer') %>% set_names(col_renamer(.)), 
+  #       selected = 'mechanic', 
+  #       multiple = FALSE
+  #     )
+  #   }
+  # })
   
   table_eda_df <- reactive({
     
@@ -396,7 +452,7 @@ server <- function(input, output, session) {
   })
   
   output$viz_eda <- renderPlotly({
-    req(input$x_eda, input$y_eda)
+    req(input$x_eda, input$y_eda, input$top_n)
     
     if (input$y_eda == 'count' && input$plot_type == 'Bar chart') {
       df <- table_eda_df()
@@ -410,7 +466,7 @@ server <- function(input, output, session) {
       p <- 
         df %>% 
         arrange(Count) %>% 
-        tail(10) %>% 
+        tail(input$top_n) %>% 
         mutate(across(all_of(my_x), ~ factor(.x, levels = .x))) %>% 
         mutate(Info = glue('
                            <BR>{str_to_title(my_x)}: {get(my_x)}
