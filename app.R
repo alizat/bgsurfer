@@ -186,10 +186,59 @@ ui <- fluidPage(
                     multiple = FALSE
                   )
                 ),
-                column(width = 3, uiOutput('plot_supp')),
-                column(width = 3, uiOutput('plot_supp2')),
-                column(width = 3, uiOutput('plot_supp3'))
+                column(
+                  width = 3, 
+                  numericInput(
+                    inputId = 'top_n', 
+                    label   = 'Show Top N', 
+                    min     = 1, 
+                    max     = 100, 
+                    value   = 10
+                  )
+                ),
+                column(
+                  width = 3, 
+                  selectInput(
+                    inputId  = 'sort_by',
+                    label    = 'Sort by ...',
+                    choices  = 'Count',
+                    selected = 'Count',
+                    multiple = FALSE
+                  )
+                ),
+                column(
+                  width = 3, 
+                  selectInput(
+                    inputId  = 'color_by',
+                    label    = 'Color by ...',
+                    choices  = 'Count',
+                    selected = 'Count',
+                    multiple = FALSE
+                  )
+                )
               ),
+              # fluidRow(
+              #   column(
+              #     width = 3,
+              #     selectInput(
+              #       inputId = 'facet_by',
+              #       label   = 'Facet by ...',
+              #       choices  = c('mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
+              #       selected = 'mechanic',
+              #       multiple = FALSE
+              #     )
+              #   ),
+              #   column(
+              #     width = 3,
+              #     numericInput(
+              #       inputId = 'facet_n', 
+              #       label   = 'Max Number of Facets', 
+              #       min     = 1, 
+              #       max     = 10, 
+              #       value   = 4
+              #     )
+              #   )
+              # ),
               br(),
               plotlyOutput('viz_eda')
             )
@@ -254,54 +303,14 @@ server <- function(input, output, session) {
   })
   
   ## *******
-  
-  output$plot_supp <- renderUI({
+
+  observeEvent(input$x_eda, {
     if (input$y_eda == 'count') {
-      numericInput(
-        inputId = 'top_n', 
-        label   = 'Show Top N', 
-        min     = 1, 
-        max     = 100, 
-        value   = 10
-      )
+      updateNumericInput(inputId = 'top_n',   value    = 10)
+      updateSelectInput(inputId = 'sort_by',  choices  = c('Count', input$x_eda) %>% set_names('Count', col_renamer(input$x_eda)))
+      updateSelectInput(inputId = 'color_by', choices  = c('Count', input$x_eda) %>% set_names('Count', col_renamer(input$x_eda)))
     }
   })
-  
-  # output$plot_supp2 <- renderUI({
-  #   if (input$y_eda == 'count') {
-  #     selectInput(
-  #       inputId  = 'color_by', 
-  #       label    = 'Color by ...', 
-  #       choices  = c('Count', input$x_eda), 
-  #       selected = 'Count', 
-  #       multiple = FALSE
-  #     )
-  #   }
-  # })
-  
-  # output$plot_supp3 <- renderUI({
-  #   if (input$y_eda == 'count') {
-  #     selectInput(
-  #       inputId  = 'color_by', 
-  #       label    = 'Color by ...', 
-  #       choices  = c('Count', input$x_eda), 
-  #       selected = 'Count', 
-  #       multiple = FALSE
-  #     )
-  #   }
-  # })
-  
-  # output$plot_supp4 <- renderUI({
-  #   if (input$y_eda == 'count') {
-  #     selectInput(
-  #       inputId = 'facet_by', 
-  #       label   = 'Facet by ...', 
-  #       choices  = c('mechanic', 'category', 'designer') %>% set_names(col_renamer(.)), 
-  #       selected = 'mechanic', 
-  #       multiple = FALSE
-  #     )
-  #   }
-  # })
   
   table_eda_df <- reactive({
     
@@ -452,7 +461,7 @@ server <- function(input, output, session) {
   })
   
   output$viz_eda <- renderPlotly({
-    req(input$x_eda, input$y_eda, input$top_n)
+    req(input$x_eda, input$y_eda, input$top_n, input$sort_by, input$color_by)
     
     if (input$y_eda == 'count' && input$plot_type == 'Bar chart') {
       df <- table_eda_df()
@@ -465,14 +474,14 @@ server <- function(input, output, session) {
       
       p <- 
         df %>% 
-        arrange(Count) %>% 
+        arrange(across(all_of(input$sort_by))) %>% 
         tail(input$top_n) %>% 
         mutate(across(all_of(my_x), ~ factor(.x, levels = .x))) %>% 
         mutate(Info = glue('
                            <BR>{str_to_title(my_x)}: {get(my_x)}
                            Count: {Count}
                            ')) %>% 
-        ggplot(aes_string(my_x, 'Count', fill = 'Count', label = 'Info')) +
+        ggplot(aes_string(my_x, 'Count', fill = input$color_by, label = 'Info')) +
         geom_bar(stat = 'identity') + 
         coord_flip() + 
         theme(legend.position = 'none') + 
