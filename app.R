@@ -48,7 +48,7 @@ ui <- fluidPage(
     
     sidebarPanel(
       
-      h3('Features'),
+      # h3('Features'),
       
       pickerInput(
         inputId = 'selected_cols', 
@@ -71,16 +71,75 @@ ui <- fluidPage(
         multiple = TRUE
       ),
       
-      br(),
-      h3('Filters'),
+      hr(),
+      # br(),
+      # h3('Filters'),
       
       ## rank filter
-      numericInput(
+      sliderInput(
         inputId = 'rank', 
-        label = 'Rank (at most)', 
+        label = 'Rank', 
         min = 0, 
         max = 5000, 
-        value = 1000
+        value = c(0, 1000)
+      ),
+      
+      ## number of players filter
+      sliderInput(
+        inputId = 'num_players', 
+        label = 'Number of players', 
+        min = min(dta$min_players), 
+        max = max(dta$max_players), 
+        value = c(min(dta$min_players), max(dta$max_players))
+      ),
+      
+      ## year filter
+      sliderInput(
+        inputId = 'year', 
+        label = 'Year', 
+        min = min(dta$year), 
+        max = max(dta$year), 
+        value = c(min(dta$year), max(dta$year))
+      ),
+      
+      ## avg_rating filter
+      sliderInput(
+        inputId = 'avg_rating', 
+        label = 'Average Rating', 
+        min = round(min(dta$avg_rating), 2) - 0.01, 
+        max = round(max(dta$avg_rating), 2) + 0.01, 
+        value = c(round(min(dta$avg_rating), 2) - 0.01, 
+                  round(max(dta$avg_rating), 2) + 0.01)
+      ),
+      
+      ## num_votes filter
+      sliderInput(
+        inputId = 'num_votes', 
+        label = 'Number of Votes', 
+        min = min(dta$num_votes), 
+        max = max(dta$num_votes), 
+        value = c(min(dta$num_votes), 
+                  max(dta$num_votes))
+      ),
+      
+      ## num_votes filter
+      sliderInput(
+        inputId = 'age', 
+        label = 'Age', 
+        min = min(dta$age), 
+        max = max(dta$age), 
+        value = c(min(dta$age), 
+                  max(dta$age))
+      ),
+      
+      ## owned filter
+      sliderInput(
+        inputId = 'owned', 
+        label = 'Owned by how many', 
+        min = min(dta$owned), 
+        max = max(dta$owned), 
+        value = c(min(dta$owned), 
+                  max(dta$owned))
       ),
       
       ## categories filter
@@ -267,7 +326,16 @@ server <- function(input, output, session) {
   dta_reactive <- reactive({
     df <- 
       dta %>% 
-      filter(rank <= input$rank) %>%
+      filter(rank %>% between(input$rank[[1]], input$rank[[2]]) ) %>%
+      filter(min_players %>% between(input$num_players[[1]], input$num_players[[2]]) | 
+             max_players %>% between(input$num_players[[1]], input$num_players[[2]])) %>%
+      # filter(min_players <= input$num_players[[1]], 
+      #        max_players >= input$num_players[[2]]) %>%
+      filter(year %>% between(input$year[[1]], input$year[[2]]) ) %>%
+      filter(avg_rating %>% between(input$avg_rating[[1]], input$avg_rating[[2]]) ) %>%
+      filter(num_votes %>% between(input$num_votes[[1]], input$num_votes[[2]]) ) %>%
+      filter(age %>% between(input$age[[1]], input$age[[2]]) ) %>%
+      filter(owned %>% between(input$owned[[1]], input$owned[[2]]) ) %>%
       filter(category %>% str_detect(input$selected_categories %>% paste(collapse = '|'))) %>% 
       filter(mechanic %>% str_detect(input$selected_mechanics  %>% paste(collapse = '|')))
     
