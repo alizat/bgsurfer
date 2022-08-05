@@ -42,6 +42,44 @@ p75 <- function(x) {quantile(x, probs = 0.75, na.rm = TRUE)}
 
 ui <- fluidPage(
   
+  tags$head(
+    
+    # body {
+    #   background-color: black;
+    #   color: white;
+    # }
+    # 
+    # .shiny-input-container {
+    #   color: #474747;
+    # }
+    
+    # Note the wrapping of the string in HTML()
+    tags$style(HTML("* {font-family: 'Arial Rounded MT';}"))
+    
+    ## Other fonts:
+    # 'Arial Narrow'
+    # 'Times'
+    # 'Courier'
+    # 'Verdana'
+    # 'Candara'
+    # 'Calibri'
+    # 'Cambria'
+    # 'Garamond'
+    # 'Perpetua'
+    # 'Lucida Console'
+    # 'Lucida Bright'
+    # 'Lucida Handwriting'
+    # 'Georgia'
+    # 'Brush Script MT'
+    # 'Papyrus'
+    # 'Book Antiqua'
+    # 'Cooper'
+    # 'Constantia'
+    # 'Rockwell'
+    # 'Trebuchet MS'
+    # 'Tw Cen MT'
+  ),
+  
   titlePanel('Analyzing the top tabletop games (according to BGG)'),
   
   sidebarLayout(
