@@ -11,6 +11,11 @@ library(shinyWidgets)
 library(shinydashboard)
 library(DT)
 
+library(bslib)
+library(thematic)
+library(showtext)
+library(patchwork)
+
 options(dplyr.summarise.inform = FALSE)
 
 
@@ -40,315 +45,347 @@ p50 <- function(x) {quantile(x, probs = 0.50, na.rm = TRUE)}
 p75 <- function(x) {quantile(x, probs = 0.75, na.rm = TRUE)}
 
 
-ui <- fluidPage(
-  
-  tags$head(
-    
-    # body {
-    #   background-color: black;
-    #   color: white;
-    # }
-    # 
-    # .shiny-input-container {
-    #   color: #474747;
-    # }
-    
-    # Note the wrapping of the string in HTML()
-    tags$style(HTML("* {font-family: 'Arial Rounded MT';}"))
-    
-    ## Other fonts:
-    # 'Arial Narrow'
-    # 'Times'
-    # 'Courier'
-    # 'Verdana'
-    # 'Candara'
-    # 'Calibri'
-    # 'Cambria'
-    # 'Garamond'
-    # 'Perpetua'
-    # 'Lucida Console'
-    # 'Lucida Bright'
-    # 'Lucida Handwriting'
-    # 'Georgia'
-    # 'Brush Script MT'
-    # 'Papyrus'
-    # 'Book Antiqua'
-    # 'Cooper'
-    # 'Constantia'
-    # 'Rockwell'
-    # 'Trebuchet MS'
-    # 'Tw Cen MT'
-  ),
-  
-  titlePanel('Analyzing the top tabletop games (according to BGG)'),
-  
-  sidebarLayout(
-    
-    sidebarPanel(
-      
-      # h3('Features'),
-      
-      pickerInput(
-        inputId = 'selected_cols', 
-        label = 'Features of Interest', 
-        choices = 
-          colnames(dta) %>% 
-          set_names(col_renamer(.)) %>% 
-          c('Num Categories', 'Num Mechanics', 'Num Designers'), 
-        selected = c('rank',
-                     'names',
-                     'year',
-                     'avg_rating',
-                     'num_votes',
-                     'designer', 
-                     'weight') %>% set_names(col_renamer(.)), 
-        options = list(`actions-box` = TRUE,
-                       `selected-text-format`= "count",
-                       `count-selected-text` = "{0} features (out of {1})",
-                       `none-selected-text` = "None selected"), 
-        multiple = TRUE
-      ),
-      
-      hr(),
-      # br(),
-      # h3('Filters'),
-      
-      ## rank filter
-      sliderInput(
-        inputId = 'rank', 
-        label = 'Rank', 
-        min = 0, 
-        max = 5000, 
-        value = c(0, 1000)
-      ),
-      
-      ## number of players filter
-      sliderInput(
-        inputId = 'num_players', 
-        label = 'Number of players', 
-        min = min(dta$min_players), 
-        max = max(dta$max_players), 
-        value = c(min(dta$min_players), max(dta$max_players))
-      ),
-      
-      ## year filter
-      sliderInput(
-        inputId = 'year', 
-        label = 'Year', 
-        min = min(dta$year), 
-        max = max(dta$year), 
-        value = c(min(dta$year), max(dta$year))
-      ),
-      
-      ## avg_rating filter
-      sliderInput(
-        inputId = 'avg_rating', 
-        label = 'Average Rating', 
-        min = round(min(dta$avg_rating), 2) - 0.01, 
-        max = round(max(dta$avg_rating), 2) + 0.01, 
-        value = c(round(min(dta$avg_rating), 2) - 0.01, 
-                  round(max(dta$avg_rating), 2) + 0.01)
-      ),
-      
-      ## num_votes filter
-      sliderInput(
-        inputId = 'num_votes', 
-        label = 'Number of Votes', 
-        min = min(dta$num_votes), 
-        max = max(dta$num_votes), 
-        value = c(min(dta$num_votes), 
-                  max(dta$num_votes))
-      ),
-      
-      ## num_votes filter
-      sliderInput(
-        inputId = 'age', 
-        label = 'Age', 
-        min = min(dta$age), 
-        max = max(dta$age), 
-        value = c(min(dta$age), 
-                  max(dta$age))
-      ),
-      
-      ## owned filter
-      sliderInput(
-        inputId = 'owned', 
-        label = 'Owned by how many', 
-        min = min(dta$owned), 
-        max = max(dta$owned), 
-        value = c(min(dta$owned), 
-                  max(dta$owned))
-      ),
-      
-      ## categories filter
-      pickerInput(
-        inputId = 'selected_categories', 
-        label = 'Categories', 
-        choices = categories, 
-        selected = categories, 
-        options = list(`actions-box` = TRUE,
-                       `selected-text-format`= "count",
-                       `count-selected-text` = "{0} categories (out of {1})",
-                       `none-selected-text` = "None selected"), 
-        multiple = TRUE
-      ),
-      
-      ## mechanics filter
-      pickerInput(
-        inputId = 'selected_mechanics', 
-        label = 'Mechanics', 
-        choices = mechanics, 
-        selected = mechanics, 
-        options = list(`actions-box` = TRUE,
-                       `selected-text-format`= "count",
-                       `count-selected-text` = "{0} mechanics (out of {1})",
-                       `none-selected-text` = "None selected"), 
-        multiple = TRUE
-      ),
-      
-      width = 3
-    ),
-    
-    mainPanel(
-      tabsetPanel(
-        
-        ## Overview
-        tabPanel(
-          'Games List',
-          DTOutput('games_list')
-        ),
-        
-        ## EDA
-        tabPanel(
-          'EDA',
-          br(),
-          fluidRow(
-            column(width = 4,
-                   selectInput(
-                     inputId  = 'x_eda',
-                     label    = 'X',
-                     choices  = c('year', 'mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
-                     selected = 'year',
-                     multiple = FALSE)),
-            column(width = 4,
-                   selectInput(
-                     inputId  = 'y_eda',
-                     label    = 'Y',
-                     choices  = c('count', 
-                                  dta %>% select_if(is.numeric) %>% colnames(),
-                                  'category', 'mechanic', 'designer') %>% set_names(col_renamer(.)),
-                     selected = 'count',
-                     multiple = FALSE)),
-            column(width = 4, uiOutput('agg_control'))
-          ),
+# # Builds theme object to be supplied to ui
+# my_theme <- bs_theme(
+#   bootswatch = "cerulean",
+#   base_font = font_google("Righteous")
+# ) %>%
+#   bs_add_rules(sass::sass_file("styles.scss"))
+# 
+# # Let thematic know to use the font from bs_lib
+# thematic_shiny(font = "auto")
+# 
+# usage: fluidPage(..., theme = my_theme, ...)
 
-          tabsetPanel(
-            tabPanel(
-              'Table',
-              br(),
-              helpText('Highlight categories to see relevant games.'),
-              HTML('<center>'),
-              DTOutput('table_eda', width = '80%'),
-              HTML('</center>'),
-              br(),
-              br(),
-              helpText('If multiple categories are highlighted, you may select whether games are to have one or all of the higlighted categories'),
-              fluidRow(
-                column(width = 3,
-                       offset = 1,
-                       radioButtons(
-                         inputId  = 'rb_any_or_all_values',
-                         label    = 'Games below to contain...',
-                         choices  = c('any highlighted values', 'all highlighted values'),
-                         selected = 'any highlighted values'
-                       ),
-                       textOutput('num_games_values_selected')
-                ),
-                column(width = 7, htmlOutput('txt_highlighted_values'))
-              ),
-              
-              DTOutput('table_breakdown_eda')
-            ),
-            tabPanel(
-              'Visual',
-              br(),
-              fluidRow(
-                column(
-                  width = 3, 
-                  selectInput(
-                    inputId  = 'plot_type', 
-                    label    = 'Plot Type', 
-                    choices  = c('Bar chart', 'Pie chart', 'Histogram'), 
-                    selected = 'Bar chart', 
-                    multiple = FALSE
-                  )
-                ),
-                column(
-                  width = 3, 
-                  numericInput(
-                    inputId = 'top_n', 
-                    label   = 'Show Top N', 
-                    min     = 1, 
-                    max     = 100, 
-                    value   = 10
-                  )
-                ),
-                column(
-                  width = 3, 
-                  selectInput(
-                    inputId  = 'sort_by',
-                    label    = 'Sort by ...',
-                    choices  = 'Count',
-                    selected = 'Count',
-                    multiple = FALSE
-                  )
-                ),
-                column(
-                  width = 3, 
-                  selectInput(
-                    inputId  = 'color_by',
-                    label    = 'Color by ...',
-                    choices  = 'Count',
-                    selected = 'Count',
-                    multiple = FALSE
-                  )
-                )
-              ),
-              # fluidRow(
-              #   column(
-              #     width = 3,
-              #     selectInput(
-              #       inputId = 'facet_by',
-              #       label   = 'Facet by ...',
-              #       choices  = c('mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
-              #       selected = 'mechanic',
-              #       multiple = FALSE
-              #     )
-              #   ),
-              #   column(
-              #     width = 3,
-              #     numericInput(
-              #       inputId = 'facet_n', 
-              #       label   = 'Max Number of Facets', 
-              #       min     = 1, 
-              #       max     = 10, 
-              #       value   = 4
-              #     )
-              #   )
-              # ),
-              br(),
-              plotlyOutput('viz_eda')
-            )
+
+ui <- dashboardPage(
+  dashboardHeader(title = 'BG Surfer'),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem(
+        text = 'Features',
+        pickerInput(
+          inputId = 'selected_cols',
+          label = 'Features of Interest',
+          choices =
+            colnames(dta) %>%
+            set_names(col_renamer(.)) %>%
+            c('Num Categories', 'Num Mechanics', 'Num Designers'),
+          selected = c('rank',
+                       'names',
+                       'year',
+                       'avg_rating',
+                       'num_votes',
+                       'designer',
+                       'weight') %>% set_names(col_renamer(.)),
+          options = list(`actions-box` = TRUE,
+                         `selected-text-format`= "count",
+                         `count-selected-text` = "{0} out of {1} features",
+                         `none-selected-text` = "None selected"),
+          multiple = TRUE
+        )
+      ),
+      menuItem(
+        text = 'Filters',
+        
+        ## rank filter
+        menuItem(
+          'Rank',
+          sliderInput(
+            inputId = 'rank',
+            label = '',
+            min = 0,
+            max = 5000,
+            value = c(0, 1000)
           )
         ),
         
-      ),
-      
-      width = 9
+        ## number of players filter
+        menuItem(
+          'Number of players',
+          sliderInput(
+            inputId = 'num_players',
+            label = '',
+            min = min(dta$min_players),
+            max = max(dta$max_players),
+            value = c(min(dta$min_players), max(dta$max_players))
+          )
+        ),
+        
+        ## year filter
+        menuItem(
+          'Year',
+          sliderInput(
+            inputId = 'year',
+            label = '',
+            min = min(dta$year),
+            max = max(dta$year),
+            value = c(min(dta$year), max(dta$year))
+          )
+        ),
+        
+        ## avg_rating filter
+        menuItem(
+          'Average Rating',
+          sliderInput(
+            inputId = 'avg_rating',
+            label = '',
+            min = round(min(dta$avg_rating), 2) - 0.01,
+            max = round(max(dta$avg_rating), 2) + 0.01,
+            value = c(round(min(dta$avg_rating), 2) - 0.01,
+                      round(max(dta$avg_rating), 2) + 0.01)
+          )
+        ),
+        
+        ## num_votes filter
+        menuItem(
+          'Number of Votes',
+          sliderInput(
+            inputId = 'num_votes',
+            label = '',
+            min = min(dta$num_votes),
+            max = max(dta$num_votes),
+            value = c(min(dta$num_votes),
+                      max(dta$num_votes))
+          )
+        ),
+        
+        ## num_votes filter
+        menuItem(
+          'Age',
+          sliderInput(
+            inputId = 'age',
+            label = '',
+            min = min(dta$age),
+            max = max(dta$age),
+            value = c(min(dta$age),
+                      max(dta$age))
+          )
+        ),
+        
+        ## owned filter
+        menuItem(
+          'Owned by how many',
+          sliderInput(
+            inputId = 'owned',
+            label = '',
+            min = min(dta$owned),
+            max = max(dta$owned),
+            value = c(min(dta$owned),
+                      max(dta$owned))
+          )
+        ),
+        
+        ## categories filter
+        menuItem(
+          'Categories',
+          pickerInput(
+            inputId = 'selected_categories',
+            label = '',
+            choices = categories,
+            selected = categories,
+            options = list(`actions-box` = TRUE,
+                           `selected-text-format`= "count",
+                           `count-selected-text` = "{0} categories (out of {1})",
+                           `none-selected-text` = "None selected"),
+            multiple = TRUE
+          )
+        ),
+        
+        ## mechanics filter
+        menuItem(
+          'Mechanics',
+          pickerInput(
+            inputId = 'selected_mechanics',
+            label = '',
+            choices = mechanics,
+            selected = mechanics,
+            options = list(`actions-box` = TRUE,
+                           `selected-text-format`= "count",
+                           `count-selected-text` = "{0} mechanics (out of {1})",
+                           `none-selected-text` = "None selected"),
+            multiple = TRUE
+          )
+        )
+      )
     )
     
-  )
+  ),
+  dashboardBody(
+    
+    tabsetPanel(
 
+      ## Overview
+      tabPanel(
+        'Games List',
+        DTOutput('games_list')
+      ),
+
+      ## EDA
+      tabPanel(
+        'EDA',
+        br(),
+        fluidRow(
+          column(width = 4,
+                 selectInput(
+                   inputId  = 'x_eda',
+                   label    = 'X',
+                   choices  = c('year', 'mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
+                   selected = 'year',
+                   multiple = FALSE)),
+          column(width = 4,
+                 selectInput(
+                   inputId  = 'y_eda',
+                   label    = 'Y',
+                   choices  = c('count',
+                                dta %>% select_if(is.numeric) %>% colnames(),
+                                'category', 'mechanic', 'designer') %>% set_names(col_renamer(.)),
+                   selected = 'count',
+                   multiple = FALSE)),
+          column(width = 4, uiOutput('agg_control'))
+        ),
+
+        tabsetPanel(
+          tabPanel(
+            'Table',
+            br(),
+            helpText('Highlight categories to see relevant games.'),
+            HTML('<center>'),
+            DTOutput('table_eda', width = '80%'),
+            HTML('</center>'),
+            br(),
+            br(),
+            helpText('If multiple categories are highlighted, you may select whether games are to have one or all of the higlighted categories'),
+            fluidRow(
+              column(width = 3,
+                     offset = 1,
+                     radioButtons(
+                       inputId  = 'rb_any_or_all_values',
+                       label    = 'Games below to contain...',
+                       choices  = c('any highlighted values', 'all highlighted values'),
+                       selected = 'any highlighted values'
+                     ),
+                     textOutput('num_games_values_selected')
+              ),
+              column(width = 7, htmlOutput('txt_highlighted_values'))
+            ),
+
+            DTOutput('table_breakdown_eda')
+          ),
+          tabPanel(
+            'Visual',
+            br(),
+            fluidRow(
+              column(
+                width = 3,
+                selectInput(
+                  inputId  = 'plot_type',
+                  label    = 'Plot Type',
+                  choices  = c('Bar chart', 'Pie chart', 'Histogram'),
+                  selected = 'Bar chart',
+                  multiple = FALSE
+                )
+              ),
+              column(
+                width = 3,
+                numericInput(
+                  inputId = 'top_n',
+                  label   = 'Show Top N',
+                  min     = 1,
+                  max     = 100,
+                  value   = 10
+                )
+              ),
+              column(
+                width = 3,
+                selectInput(
+                  inputId  = 'sort_by',
+                  label    = 'Sort by ...',
+                  choices  = 'Count',
+                  selected = 'Count',
+                  multiple = FALSE
+                )
+              ),
+              column(
+                width = 3,
+                selectInput(
+                  inputId  = 'color_by',
+                  label    = 'Color by ...',
+                  choices  = 'Count',
+                  selected = 'Count',
+                  multiple = FALSE
+                )
+              )
+            ),
+            # fluidRow(
+            #   column(
+            #     width = 3,
+            #     selectInput(
+            #       inputId = 'facet_by',
+            #       label   = 'Facet by ...',
+            #       choices  = c('mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
+            #       selected = 'mechanic',
+            #       multiple = FALSE
+            #     )
+            #   ),
+            #   column(
+            #     width = 3,
+            #     numericInput(
+            #       inputId = 'facet_n',
+            #       label   = 'Max Number of Facets',
+            #       min     = 1,
+            #       max     = 10,
+            #       value   = 4
+            #     )
+            #   )
+            # ),
+            br(),
+            plotlyOutput('viz_eda')
+          )
+        )
+      ),
+
+    ),
+    
+  )
+  
+  # tags$head(
+  #   
+  #   # body {
+  #   #   background-color: black;
+  #   #   color: white;
+  #   # }
+  #   # 
+  #   # .shiny-input-container {
+  #   #   color: #474747;
+  #   # }
+  #   
+  #   # Note the wrapping of the string in HTML()
+  #   tags$style(HTML("* {font-family: 'Arial Rounded MT';}"))
+  #   
+  #   ## Other fonts:
+  #   # 'Arial Narrow'
+  #   # 'Times'
+  #   # 'Courier'
+  #   # 'Verdana'
+  #   # 'Candara'
+  #   # 'Calibri'
+  #   # 'Cambria'
+  #   # 'Garamond'
+  #   # 'Perpetua'
+  #   # 'Lucida Console'
+  #   # 'Lucida Bright'
+  #   # 'Lucida Handwriting'
+  #   # 'Georgia'
+  #   # 'Brush Script MT'
+  #   # 'Papyrus'
+  #   # 'Book Antiqua'
+  #   # 'Cooper'
+  #   # 'Constantia'
+  #   # 'Rockwell'
+  #   # 'Trebuchet MS'
+  #   # 'Tw Cen MT'
+  # ),
 )
 
 server <- function(input, output, session) {
@@ -369,14 +406,14 @@ server <- function(input, output, session) {
              max_players %>% between(input$num_players[[1]], input$num_players[[2]])) %>%
       # filter(min_players <= input$num_players[[1]], 
       #        max_players >= input$num_players[[2]]) %>%
-      filter(year %>% between(input$year[[1]], input$year[[2]]) ) %>%
-      filter(avg_rating %>% between(input$avg_rating[[1]], input$avg_rating[[2]]) ) %>%
-      filter(num_votes %>% between(input$num_votes[[1]], input$num_votes[[2]]) ) %>%
-      filter(age %>% between(input$age[[1]], input$age[[2]]) ) %>%
-      filter(owned %>% between(input$owned[[1]], input$owned[[2]]) ) %>%
-      filter(category %>% str_detect(input$selected_categories %>% paste(collapse = '|'))) %>% 
-      filter(mechanic %>% str_detect(input$selected_mechanics  %>% paste(collapse = '|')))
-    
+      filter(year       %>% between(       input$year[[1]], input$year[[2]]       )) %>%
+      filter(avg_rating %>% between( input$avg_rating[[1]], input$avg_rating[[2]] )) %>%
+      filter(num_votes  %>% between(  input$num_votes[[1]], input$num_votes[[2]]  )) %>%
+      filter(age        %>% between(        input$age[[1]], input$age[[2]]        )) %>%
+      filter(owned      %>% between(      input$owned[[1]], input$owned[[2]]      )) %>%
+      filter(category   %>% str_detect(input$selected_categories %>% paste(collapse = '|'))) %>%
+      filter(mechanic   %>% str_detect(input$selected_mechanics  %>% paste(collapse = '|')))
+
     count_categories <- function(x) {
       x %>% 
         str_split(', ') %>% 
@@ -594,7 +631,15 @@ server <- function(input, output, session) {
         labs(title = glue('{col_renamer(input$y_eda)} ~ {col_renamer(input$x_eda)}'),
              x = glue('{col_renamer(input$x_eda)}'),
              y = glue('{col_renamer(input$y_eda)}'))
-      
+
+      if (input$color_by == 'Count') {
+        p <- p + scale_fill_gradient(low = 'purple', high = 'orange')
+      }
+      if (input$color_by == input$x_eda) {
+        p <- p + scale_fill_manual(values = rainbow(input$top_n)) + scale_fill_hue(l = 40)
+        #+ scale_fill_brewer(palette = 'Spectral')
+      }
+
       ggplotly(p, tooltip = 'Info')
     }
   })
