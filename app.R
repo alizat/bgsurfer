@@ -58,8 +58,11 @@ p75 <- function(x) {quantile(x, probs = 0.75, na.rm = TRUE)}
 # usage: fluidPage(..., theme = my_theme, ...)
 
 
+dbHeader <- dashboardHeader(title = 'BG Surfer')
+dbHeader$children[[2]]$children <- tags$img(src='navbar-logo-bgg-b2.svg')
 ui <- dashboardPage(
-  dashboardHeader(title = 'BG Surfer'),
+  skin = 'purple',
+  dbHeader,
   dashboardSidebar(
     sidebarMenu(
       menuItem(
