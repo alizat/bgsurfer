@@ -189,7 +189,7 @@ ui <- dashboardPage(
             selected = categories,
             options = list(`actions-box` = TRUE,
                            `selected-text-format`= "count",
-                           `count-selected-text` = "{0} categories (out of {1})",
+                           `count-selected-text` = "{0} out of {1} categories",
                            `none-selected-text` = "None selected"),
             multiple = TRUE
           )
@@ -205,7 +205,7 @@ ui <- dashboardPage(
             selected = mechanics,
             options = list(`actions-box` = TRUE,
                            `selected-text-format`= "count",
-                           `count-selected-text` = "{0} mechanics (out of {1})",
+                           `count-selected-text` = "{0} out of {1} mechanics",
                            `none-selected-text` = "None selected"),
             multiple = TRUE
           )
@@ -350,45 +350,46 @@ ui <- dashboardPage(
 
     ),
     
-  )
+  ),
   
-  # tags$head(
-  #   
-  #   # body {
-  #   #   background-color: black;
-  #   #   color: white;
-  #   # }
-  #   # 
-  #   # .shiny-input-container {
-  #   #   color: #474747;
-  #   # }
-  #   
-  #   # Note the wrapping of the string in HTML()
-  #   tags$style(HTML("* {font-family: 'Arial Rounded MT';}"))
-  #   
-  #   ## Other fonts:
-  #   # 'Arial Narrow'
-  #   # 'Times'
-  #   # 'Courier'
-  #   # 'Verdana'
-  #   # 'Candara'
-  #   # 'Calibri'
-  #   # 'Cambria'
-  #   # 'Garamond'
-  #   # 'Perpetua'
-  #   # 'Lucida Console'
-  #   # 'Lucida Bright'
-  #   # 'Lucida Handwriting'
-  #   # 'Georgia'
-  #   # 'Brush Script MT'
-  #   # 'Papyrus'
-  #   # 'Book Antiqua'
-  #   # 'Cooper'
-  #   # 'Constantia'
-  #   # 'Rockwell'
-  #   # 'Trebuchet MS'
-  #   # 'Tw Cen MT'
-  # ),
+  tags$head(
+
+    # body {
+    #   background-color: black;
+    #   color: white;
+    # }
+
+    # Note the wrapping of the string in HTML()
+    tags$style(
+    HTML("
+      .sidebar-menu > li > a > span {color: #ff6700;}
+      .sidebar-menu > li > a > i {color: #ff6700;}
+      li > a {color: rgb(96, 92, 168);}
+      * {font-family: 'Arial Rounded MT';}"))
+    
+    ## Other fonts:
+    # 'Arial Narrow'
+    # 'Times'
+    # 'Courier'
+    # 'Verdana'
+    # 'Candara'
+    # 'Calibri'
+    # 'Cambria'
+    # 'Garamond'
+    # 'Perpetua'
+    # 'Lucida Console'
+    # 'Lucida Bright'
+    # 'Lucida Handwriting'
+    # 'Georgia'
+    # 'Brush Script MT'
+    # 'Papyrus'
+    # 'Book Antiqua'
+    # 'Cooper'
+    # 'Constantia'
+    # 'Rockwell'
+    # 'Trebuchet MS'
+    # 'Tw Cen MT'
+  )
 )
 
 server <- function(input, output, session) {
