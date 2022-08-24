@@ -216,6 +216,8 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     
+    includeCSS("styling.css"),
+    
     tabsetPanel(
 
       ## Overview
@@ -350,45 +352,6 @@ ui <- dashboardPage(
 
     ),
     
-  ),
-  
-  tags$head(
-
-    # body {
-    #   background-color: black;
-    #   color: white;
-    # }
-
-    # Note the wrapping of the string in HTML()
-    tags$style(
-    HTML("
-      .sidebar-menu > li > a > span {color: #ff6700;}
-      .sidebar-menu > li > a > i {color: #ff6700;}
-      li > a {color: rgb(96, 92, 168);}
-      * {font-family: 'Arial Rounded MT';}"))
-    
-    ## Other fonts:
-    # 'Arial Narrow'
-    # 'Times'
-    # 'Courier'
-    # 'Verdana'
-    # 'Candara'
-    # 'Calibri'
-    # 'Cambria'
-    # 'Garamond'
-    # 'Perpetua'
-    # 'Lucida Console'
-    # 'Lucida Bright'
-    # 'Lucida Handwriting'
-    # 'Georgia'
-    # 'Brush Script MT'
-    # 'Papyrus'
-    # 'Book Antiqua'
-    # 'Cooper'
-    # 'Constantia'
-    # 'Rockwell'
-    # 'Trebuchet MS'
-    # 'Tw Cen MT'
   )
 )
 

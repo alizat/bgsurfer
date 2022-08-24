@@ -1,0 +1,49 @@
+
+/*general font  */
+* {font-family: 'Arial Rounded MT';}
+
+/*    
+Other fonts:
+  'Arial Narrow'
+  'Times'
+  'Courier'
+  'Verdana'
+  'Candara'
+  'Calibri'
+  'Cambria'
+  'Garamond'
+  'Perpetua'
+  'Lucida Console'
+  'Lucida Bright'
+  'Lucida Handwriting'
+  'Georgia'
+  'Brush Script MT'
+  'Papyrus'
+  'Book Antiqua'
+  'Cooper'
+  'Constantia'
+  'Rockwell'
+  'Trebuchet MS'
+  'Tw Cen MT'
+*/
+
+/* sidebar */
+/*
+.main-sidebar {background-color: #383663;}
+*/
+
+/* sidebar item */
+.sidebar-menu > li > a > * {color: #ff6700;}
+.sidebar-menu > li         {background-color: #383663;}
+
+/* tabs */
+li > a       {color: rgb(96, 92, 168);}
+li > a:hover {color: #ff6700;}
+
+/* body */
+/*
+body {
+  background-color: black;
+  color: white;
+}
+*/
