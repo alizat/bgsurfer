@@ -15,7 +15,11 @@ Some scenarios where it can be useful (eventually):
 
 So far:
 
-* Code for preliminary analysis of [mrpantherson's data](https://www.kaggle.com/datasets/mrpantherson/board-game-data) has been added. Still a work in progress though. More coming soon!
+* Code for preliminary analysis of [mrpantherson's data](https://www.kaggle.com/datasets/mrpantherson/board-game-data) has been added. 
+* An R Shiny app has been developed using [mrpantherson's data](https://www.kaggle.com/datasets/mrpantherson/board-game-data).
+    * The app facilitates viewing of the data and provides simple analyses.
+    * Still optimizing the look and feel of the app.
+    * More analysis tools on the way!
 
 <BR>
 

@@ -219,137 +219,140 @@ ui <- dashboardPage(
     includeCSS("styling.css"),
     
     tabsetPanel(
-
+      
       ## Overview
       tabPanel(
         'Games List',
         DTOutput('games_list')
       ),
-
+      
       ## EDA
       tabPanel(
         'EDA',
         br(),
         fluidRow(
-          column(width = 4,
-                 selectInput(
-                   inputId  = 'x_eda',
-                   label    = 'X',
-                   choices  = c('year', 'mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
-                   selected = 'year',
-                   multiple = FALSE)),
-          column(width = 4,
-                 selectInput(
-                   inputId  = 'y_eda',
-                   label    = 'Y',
-                   choices  = c('count',
-                                dta %>% select_if(is.numeric) %>% colnames(),
-                                'category', 'mechanic', 'designer') %>% set_names(col_renamer(.)),
-                   selected = 'count',
-                   multiple = FALSE)),
-          column(width = 4, uiOutput('agg_control'))
-        ),
-
-        tabsetPanel(
-          tabPanel(
-            'Table',
-            br(),
-            helpText('Highlight categories to see relevant games.'),
-            HTML('<center>'),
-            DTOutput('table_eda', width = '80%'),
-            HTML('</center>'),
-            br(),
-            br(),
-            helpText('If multiple categories are highlighted, you may select whether games are to have one or all of the higlighted categories'),
-            fluidRow(
-              column(width = 3,
-                     offset = 1,
-                     radioButtons(
-                       inputId  = 'rb_any_or_all_values',
-                       label    = 'Games below to contain...',
-                       choices  = c('any highlighted values', 'all highlighted values'),
-                       selected = 'any highlighted values'
-                     ),
-                     textOutput('num_games_values_selected')
-              ),
-              column(width = 7, htmlOutput('txt_highlighted_values'))
-            ),
-
-            DTOutput('table_breakdown_eda')
+          column(
+            width = 2,
+            selectInput(
+              inputId  = 'x_eda',
+              label    = 'X',
+              choices  = c('year', 'mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
+              selected = 'year',
+              multiple = FALSE),
+            selectInput(
+              inputId  = 'y_eda',
+              label    = 'Y',
+              choices  = c('count',
+                           dta %>% select_if(is.numeric) %>% colnames(),
+                           'category', 'mechanic', 'designer') %>% set_names(col_renamer(.)),
+              selected = 'count',
+              multiple = FALSE)
           ),
-          tabPanel(
-            'Visual',
-            br(),
-            fluidRow(
-              column(
-                width = 3,
-                selectInput(
-                  inputId  = 'plot_type',
-                  label    = 'Plot Type',
-                  choices  = c('Bar chart', 'Pie chart', 'Histogram'),
-                  selected = 'Bar chart',
-                  multiple = FALSE
-                )
+          column(
+            width = 10,
+            style = 'border-left-width: 5px; border-left-color: rgb(96, 92, 168); border-left-style: dotted',
+            tabsetPanel(
+              tabPanel(
+                'Table',
+                br(),
+                helpText('Highlight categories to see relevant games.'),
+                HTML('<center>'),
+                DTOutput('table_eda', width = '80%'),
+                HTML('</center>'),
+                br(),
+                br(),
+                helpText('If multiple categories are highlighted, you may select whether games are to have one or all of the higlighted categories'),
+                fluidRow(
+                  column(width = 3,
+                         offset = 1,
+                         radioButtons(
+                           inputId  = 'rb_any_or_all_values',
+                           label    = 'Games below to contain...',
+                           choices  = c('any highlighted values', 'all highlighted values'),
+                           selected = 'any highlighted values'
+                         ),
+                         textOutput('num_games_values_selected')
+                  ),
+                  column(width = 7, htmlOutput('txt_highlighted_values'))
+                ),
+                
+                DTOutput('table_breakdown_eda')
               ),
-              column(
-                width = 3,
-                numericInput(
-                  inputId = 'top_n',
-                  label   = 'Show Top N',
-                  min     = 1,
-                  max     = 100,
-                  value   = 10
-                )
-              ),
-              column(
-                width = 3,
-                selectInput(
-                  inputId  = 'sort_by',
-                  label    = 'Sort by ...',
-                  choices  = 'Count',
-                  selected = 'Count',
-                  multiple = FALSE
-                )
-              ),
-              column(
-                width = 3,
-                selectInput(
-                  inputId  = 'color_by',
-                  label    = 'Color by ...',
-                  choices  = 'Count',
-                  selected = 'Count',
-                  multiple = FALSE
-                )
+              tabPanel(
+                'Visual',
+                br(),
+                fluidRow(
+                  column(
+                    width = 3,
+                    selectInput(
+                      inputId  = 'plot_type',
+                      label    = 'Plot Type',
+                      choices  = c('Bar chart', 'Pie chart', 'Histogram'),
+                      selected = 'Bar chart',
+                      multiple = FALSE
+                    )
+                  ),
+                  column(
+                    width = 3,
+                    numericInput(
+                      inputId = 'top_n',
+                      label   = 'Show Top N',
+                      min     = 1,
+                      max     = 100,
+                      value   = 10
+                    )
+                  ),
+                  column(
+                    width = 3,
+                    selectInput(
+                      inputId  = 'sort_by',
+                      label    = 'Sort by ...',
+                      choices  = 'Count',
+                      selected = 'Count',
+                      multiple = FALSE
+                    )
+                  ),
+                  column(
+                    width = 3,
+                    selectInput(
+                      inputId  = 'color_by',
+                      label    = 'Color by ...',
+                      choices  = 'Count',
+                      selected = 'Count',
+                      multiple = FALSE
+                    )
+                  )
+                ),
+                # fluidRow(
+                #   column(
+                #     width = 3,
+                #     selectInput(
+                #       inputId = 'facet_by',
+                #       label   = 'Facet by ...',
+                #       choices  = c('mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
+                #       selected = 'mechanic',
+                #       multiple = FALSE
+                #     )
+                #   ),
+                #   column(
+                #     width = 3,
+                #     numericInput(
+                #       inputId = 'facet_n',
+                #       label   = 'Max Number of Facets',
+                #       min     = 1,
+                #       max     = 10,
+                #       value   = 4
+                #     )
+                #   )
+                # ),
+                br(),
+                plotlyOutput('viz_eda')
               )
-            ),
-            # fluidRow(
-            #   column(
-            #     width = 3,
-            #     selectInput(
-            #       inputId = 'facet_by',
-            #       label   = 'Facet by ...',
-            #       choices  = c('mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
-            #       selected = 'mechanic',
-            #       multiple = FALSE
-            #     )
-            #   ),
-            #   column(
-            #     width = 3,
-            #     numericInput(
-            #       inputId = 'facet_n',
-            #       label   = 'Max Number of Facets',
-            #       min     = 1,
-            #       max     = 10,
-            #       value   = 4
-            #     )
-            #   )
-            # ),
-            br(),
-            plotlyOutput('viz_eda')
+            )
           )
-        )
+        ),
       ),
-
+      
     ),
     
   )
@@ -370,7 +373,7 @@ server <- function(input, output, session) {
       dta %>% 
       filter(rank %>% between(input$rank[[1]], input$rank[[2]]) ) %>%
       filter(min_players %>% between(input$num_players[[1]], input$num_players[[2]]) | 
-             max_players %>% between(input$num_players[[1]], input$num_players[[2]])) %>%
+               max_players %>% between(input$num_players[[1]], input$num_players[[2]])) %>%
       # filter(min_players <= input$num_players[[1]], 
       #        max_players >= input$num_players[[2]]) %>%
       filter(year       %>% between(       input$year[[1]], input$year[[2]]       )) %>%
@@ -380,7 +383,7 @@ server <- function(input, output, session) {
       filter(owned      %>% between(      input$owned[[1]], input$owned[[2]]      )) %>%
       filter(category   %>% str_detect(input$selected_categories %>% paste(collapse = '|'))) %>%
       filter(mechanic   %>% str_detect(input$selected_mechanics  %>% paste(collapse = '|')))
-
+    
     count_categories <- function(x) {
       x %>% 
         str_split(', ') %>% 
@@ -413,7 +416,7 @@ server <- function(input, output, session) {
   })
   
   ## *******
-
+  
   observeEvent(input$x_eda, {
     if (input$y_eda == 'count') {
       updateNumericInput(inputId = 'top_n',   value    = 10)
@@ -486,13 +489,13 @@ server <- function(input, output, session) {
       ) %>% 
       formatStyle(1:ncol(display_me), lineHeight = '40%')
   })
-
+  
   values_selected <- reactive({
     selected_values <-
       table_eda_df()[input$table_eda_rows_selected,1] %>% pull()
     selected_values
   })
-
+  
   values_selected_games <- reactive({
     selected_values <- values_selected()
     selected_games <- c()
@@ -517,10 +520,10 @@ server <- function(input, output, session) {
         selected_games <- selected_games %>% pull(names)
       }
     }
-
+    
     selected_games
   })
-
+  
   output$txt_highlighted_values <- renderUI({
     HTML(glue(
       '
@@ -531,16 +534,16 @@ server <- function(input, output, session) {
       '
     ))
   })
-
+  
   # output$num_games_values_selected <- renderText({
   #   req(values_selected_games())
   #   values_selected_games() %>% length() %>% paste('games')
   # })
-
+  
   output$table_breakdown_eda <- renderDT({
     selected_categories <- values_selected()
     selected_games <- values_selected_games()
-
+    
     if (length(selected_games) > 0) {
       display_me <-
         dta_compact() %>%
@@ -598,7 +601,7 @@ server <- function(input, output, session) {
         labs(title = glue('{col_renamer(input$y_eda)} ~ {col_renamer(input$x_eda)}'),
              x = glue('{col_renamer(input$x_eda)}'),
              y = glue('{col_renamer(input$y_eda)}'))
-
+      
       if (input$color_by == 'Count') {
         p <- p + scale_fill_gradient(low = 'purple', high = 'orange')
       }
@@ -606,7 +609,7 @@ server <- function(input, output, session) {
         p <- p + scale_fill_manual(values = rainbow(input$top_n)) + scale_fill_hue(l = 40)
         #+ scale_fill_brewer(palette = 'Spectral')
       }
-
+      
       ggplotly(p, tooltip = 'Info')
     }
   })
