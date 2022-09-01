@@ -218,6 +218,8 @@ ui <- dashboardPage(
     
     includeCSS("styling.css"),
     
+    shinyjs::useShinyjs(),
+    
     tabsetPanel(
       
       ## Overview
@@ -246,18 +248,47 @@ ui <- dashboardPage(
                            dta %>% select_if(is.numeric) %>% colnames(),
                            'category', 'mechanic', 'designer') %>% set_names(col_renamer(.)),
               selected = 'count',
-              multiple = FALSE)
+              multiple = FALSE),
+            selectInput(
+              inputId  = 'plot_type',
+              label    = 'Plot Type',
+              choices  = c('Bar chart', 'Pie chart', 'Histogram'),
+              selected = 'Bar chart',
+              multiple = FALSE
+            ),
+            selectInput(
+              inputId  = 'sort_by',
+              label    = 'Sort by ...',
+              choices  = 'Count',
+              selected = 'Count',
+              multiple = FALSE
+            ),
+            selectInput(
+              inputId  = 'color_by',
+              label    = 'Color by ...',
+              choices  = 'Count',
+              selected = 'Count',
+              multiple = FALSE
+            ),
+            numericInput(
+              inputId = 'top_n',
+              label   = 'Show Top N',
+              min     = 1,
+              max     = 100,
+              value   = 10
+            )
           ),
           column(
             width = 10,
-            style = 'border-left-width: 5px; border-left-color: rgb(96, 92, 168); border-left-style: dotted',
+            style = 'border-left-width: 2px; border-left-color: rgb(96, 92, 168); border-left-style: dotted',
             tabsetPanel(
+              id = 'visuals',
               tabPanel(
                 'Table',
                 br(),
                 helpText('Highlight categories to see relevant games.'),
                 HTML('<center>'),
-                DTOutput('table_eda', width = '80%'),
+                DTOutput('table_eda'),
                 HTML('</center>'),
                 br(),
                 br(),
@@ -281,48 +312,6 @@ ui <- dashboardPage(
               tabPanel(
                 'Visual',
                 br(),
-                fluidRow(
-                  column(
-                    width = 3,
-                    selectInput(
-                      inputId  = 'plot_type',
-                      label    = 'Plot Type',
-                      choices  = c('Bar chart', 'Pie chart', 'Histogram'),
-                      selected = 'Bar chart',
-                      multiple = FALSE
-                    )
-                  ),
-                  column(
-                    width = 3,
-                    numericInput(
-                      inputId = 'top_n',
-                      label   = 'Show Top N',
-                      min     = 1,
-                      max     = 100,
-                      value   = 10
-                    )
-                  ),
-                  column(
-                    width = 3,
-                    selectInput(
-                      inputId  = 'sort_by',
-                      label    = 'Sort by ...',
-                      choices  = 'Count',
-                      selected = 'Count',
-                      multiple = FALSE
-                    )
-                  ),
-                  column(
-                    width = 3,
-                    selectInput(
-                      inputId  = 'color_by',
-                      label    = 'Color by ...',
-                      choices  = 'Count',
-                      selected = 'Count',
-                      multiple = FALSE
-                    )
-                  )
-                ),
                 # fluidRow(
                 #   column(
                 #     width = 3,
@@ -345,7 +334,7 @@ ui <- dashboardPage(
                 #     )
                 #   )
                 # ),
-                br(),
+                # br(),
                 plotlyOutput('viz_eda')
               )
             )
@@ -416,6 +405,22 @@ server <- function(input, output, session) {
   })
   
   ## *******
+  
+  observeEvent(input$visuals, {
+    if (input$visuals == 'Visual') {
+      shinyjs::showElement('plot_type')
+      shinyjs::showElement('top_n')
+      shinyjs::showElement('sort_by')
+      shinyjs::showElement('color_by')
+      
+    } else {
+      shinyjs::hideElement('plot_type')
+      shinyjs::hideElement('top_n')
+      shinyjs::hideElement('sort_by')
+      shinyjs::hideElement('color_by')
+    }
+    
+  })
   
   observeEvent(input$x_eda, {
     if (input$y_eda == 'count') {
