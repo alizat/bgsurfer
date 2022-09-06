@@ -582,6 +582,7 @@ server <- function(input, output, session) {
     req(input$x_eda, input$y_eda, input$top_n, input$sort_by, input$color_by)
     
     if (input$y_eda == 'count' && input$plot_type == 'Bar chart') {
+      
       df <- table_eda_df()
       if (length(input$x_eda) > 1) {
         my_x <- input$x_eda %>% paste(collapse = '-')
@@ -608,14 +609,51 @@ server <- function(input, output, session) {
              y = glue('{col_renamer(input$y_eda)}'))
       
       if (input$color_by == 'Count') {
-        p <- p + scale_fill_gradient(low = 'purple', high = 'orange')
+        p <- p + scale_fill_gradient(low = '#383663', high = '#605CA8')
       }
       if (input$color_by == input$x_eda) {
         p <- p + scale_fill_manual(values = rainbow(input$top_n)) + scale_fill_hue(l = 40)
         #+ scale_fill_brewer(palette = 'Spectral')
       }
       
-      ggplotly(p, tooltip = 'Info')
+      p <- ggplotly(p, tooltip = 'Info')
+      
+      p
+      
+    } else if (input$y_eda == 'count' && input$plot_type == 'Pie chart') {
+      
+      df <- table_eda_df()
+      if (length(input$x_eda) > 1) {
+        my_x <- input$x_eda %>% paste(collapse = '-')
+        df <- df %>% unite(input$x_eda %>% paste(collapse = '_'))
+      } else {
+        my_x <- input$x_eda
+      }
+      
+      df_tmp <- 
+        df %>% 
+        arrange(across(all_of(input$sort_by))) %>% 
+        tail(input$top_n) %>% 
+        mutate(across(all_of(my_x), ~ factor(.x, levels = .x))) %>% 
+        mutate(Info = glue('
+                           <BR>{str_to_title(my_x)}: {get(my_x)}
+                           Count: {Count}
+                           '))
+      
+      my_colors <- colorRampPalette(colors = c('#383663', '#605CA8'))(input$top_n)
+      
+      p <- plot_ly(df_tmp, 
+                   labels = as.formula(paste0('~', my_x)), 
+                   values = as.formula(paste0('~', 'Count')), 
+                   textinfo = 'label',  # 'label+percent'
+                   hoverinfo = 'text',
+                   text = ~paste(Count, ' games'),
+                   marker = list(colors = my_colors,
+                                 line = list(color = '#FFFFFF', width = 1)),
+                   type = 'pie') %>% 
+      layout(title = glue('{col_renamer(input$y_eda)} ~ {col_renamer(input$x_eda)}'))
+      
+      p
     }
   })
   
