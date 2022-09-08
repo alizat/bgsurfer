@@ -640,18 +640,28 @@ server <- function(input, output, session) {
                            Count: {Count}
                            '))
       
-      my_colors <- colorRampPalette(colors = c('#383663', '#605CA8'))(input$top_n)
+      if (input$color_by == input$x_eda) {
+        my_colors <- rainbow(input$top_n)
+      } else {
+        my_colors <- colorRampPalette(colors = c('#383663', '#7f7cb9'))(input$top_n)
+      }
+      
+      t <- list(
+        family = "Arial Rounded MT",
+        # color = 'white',
+        size = 14)
       
       p <- plot_ly(df_tmp, 
                    labels = as.formula(paste0('~', my_x)), 
                    values = as.formula(paste0('~', 'Count')), 
                    textinfo = 'label',  # 'label+percent'
                    hoverinfo = 'text',
+                   insidetextfont = list(color = '#FFFFFF'),
                    text = ~paste(Count, ' games'),
                    marker = list(colors = my_colors,
                                  line = list(color = '#FFFFFF', width = 1)),
                    type = 'pie') %>% 
-      layout(title = glue('{col_renamer(input$y_eda)} ~ {col_renamer(input$x_eda)}'))
+      layout(title = glue('{col_renamer(input$y_eda)} ~ {col_renamer(input$x_eda)}'), font = t)
       
       p
     }
