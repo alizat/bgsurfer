@@ -238,7 +238,7 @@ ui <- dashboardPage(
             selectInput(
               inputId  = 'x_eda',
               label    = 'X',
-              choices  = c('year', 'mechanic', 'category', 'designer') %>% set_names(col_renamer(.)),
+              choices  = c('year', 'mechanic', 'category', 'designer', 'age', 'avg_rating') %>% set_names(col_renamer(.)),
               selected = 'year',
               multiple = FALSE),
             selectInput(
@@ -252,7 +252,7 @@ ui <- dashboardPage(
             selectInput(
               inputId  = 'plot_type',
               label    = 'Plot Type',
-              choices  = c('Bar chart', 'Pie chart', 'Histogram'),
+              choices  = c('Bar chart', 'Pie chart'),
               selected = 'Bar chart',
               multiple = FALSE
             ),
@@ -335,7 +335,14 @@ ui <- dashboardPage(
                 #   )
                 # ),
                 # br(),
-                plotlyOutput('viz_eda')
+                plotlyOutput('viz_eda'),
+                numericInput(
+                  inputId = 'num_bins',
+                  label   = 'Number of Bins',
+                  min     = 1,
+                  max     = 30,
+                  value   = 10
+                )
               )
             )
           )
@@ -421,6 +428,14 @@ server <- function(input, output, session) {
     }
     
   })
+  
+  # observeEvent(input$plot_type, {
+  #   if (input$plot_type == 'Histogram') {
+  #     shinyjs::showElement('num_bins')
+  #   } else {
+  #     shinyjs::hideElement('num_bins')
+  #   }
+  # })
   
   observeEvent(input$x_eda, {
     if (input$y_eda == 'count') {
@@ -570,13 +585,13 @@ server <- function(input, output, session) {
     }
   })
   
-  observeEvent(input$y_eda, {
-    if (input$y_eda == 'count') {
-      updateSelectInput(inputId = 'plot_type', 
-                        choices = c('Bar chart', 'Pie chart', 'Histogram'), 
-                        selected = 'Bar chart')
-    }
-  })
+  # observeEvent(input$y_eda, {
+  #   if (input$y_eda == 'count') {
+  #     updateSelectInput(inputId = 'plot_type', 
+  #                       choices = c('Bar chart', 'Pie chart'), 
+  #                       selected = 'Bar chart')
+  #   }
+  # })
   
   output$viz_eda <- renderPlotly({
     req(input$x_eda, input$y_eda, input$top_n, input$sort_by, input$color_by)
