@@ -37,7 +37,7 @@ Other fonts:
 .sidebar-menu > li         {background-color: #383663;}
 
 /* tabs */
-li > a       {color: rgb(96, 92, 168);}
+li > a       {color: rgb(96, 92, 168);}  /* #605CA8 */
 li > a:hover {color: #ff6700 !important;}
 .active > a  {color: #ff6700 !important;}
 
