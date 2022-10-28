@@ -511,7 +511,28 @@ server <- function(input, output, session) {
                 
             } else if (input$plot_type == 'Box Plot') {
                 showElement('y_eda')
+                showElement('color_by')
+                showElement('sort_by')
                 showElement('top_n')
+                
+                x_vars <- c(multivalued_cat_vars, categorical_vars)
+                updateSelectInput(
+                    inputId = 'x_eda',
+                    choices = x_vars %>% set_names(col_renamer(x_vars))
+                )
+                updateSelectInput(
+                    inputId = 'y_eda',
+                    choices = numerical_vars %>% set_names(col_renamer(numerical_vars)),
+                    selected = 'owned'
+                )
+                updateSelectInput(
+                    inputId = 'color_by',
+                    choices = c('X', 'Y')
+                )
+                updateSelectInput(
+                    inputId = 'sort_by',
+                    choices = x_vars
+                )
             }
         }
         
@@ -686,18 +707,19 @@ server <- function(input, output, session) {
     
     ######## ---- eda/visuals tab ----
     output$viz_eda <- renderPlotly({
-        req(input$x_eda)
+        req(input$x_eda, input$plot_type)
         
         df <- dta_reactive()
         
         if (input$plot_type == 'Histogram') {
+            
             df %>% 
                 ggplot(aes_string(input$x_eda)) +
                 geom_histogram(fill = '#605CA8', bins = input$num_bins) + 
                 labs(x = input$x_eda %>% col_renamer()) + 
                 theme_classic()
             
-        } else if (input$plot_type == 'Bar Chart' && input$x_eda %in% c(multivalued_cat_vars, categorical_vars)) {
+        } else if (input$plot_type == 'Bar Chart') {
             
             ## multi-valued categorical variables  ==>  multiply rows
             if (input$x_eda %in% multivalued_cat_vars)
@@ -747,6 +769,7 @@ server <- function(input, output, session) {
             p
             
         } else if (input$plot_type == 'Scatterplot') {
+            
             req(input$y_eda)
             if (input$y_eda != 'count') {
                 p <- 
@@ -786,6 +809,50 @@ server <- function(input, output, session) {
                 
                 p %>% ggplotly(tooltip = 'Game')
             }
+        } else if (input$plot_type == 'Box Plot') {
+            req(input$sort_by)
+            
+            ## multi-valued categorical variables  ==>  multiply rows
+            if (input$x_eda %in% multivalued_cat_vars)
+                df <- df %>% separate_rows(!!input$x_eda, sep = ', ')
+            
+            if (input$sort_by != 'Count')
+                df <- df %>% arrange(across(all_of(input$sort_by)))
+            
+            these_values <- df[[input$x_eda]] %>% rev() %>% unique() %>% head(10)
+            
+            df <- df[df[[input$x_eda]] %in% these_values, ]
+            
+            # df <- 
+            #     df %>% 
+            #     tail(input$top_n) %>% 
+            #     mutate(across(all_of(input$x_eda), ~ factor(.x, levels = .x))) %>%
+            #     mutate(Info = glue('
+            #                <BR>{str_to_title(input$x_eda)}: {get(input$x_eda)}
+            #                Count: {Count}
+            #                '))
+            
+            # if (input$color_by == 'X') {
+                my_colors <- rainbow(input$top_n)
+                fill_by_this <- input$x_eda
+            # } else {
+            #     my_colors <- colorRampPalette(colors = c('#383663', '#7f7cb9'))(input$top_n)
+            #     fill_by_this <- 'Count'
+            # }
+            
+            p <- 
+                df %>%
+                ggplot(aes_string(input$x_eda, input$y_eda)) +
+                geom_boxplot(aes_string(fill = fill_by_this)) +
+                labs(x = input$x_eda %>% col_renamer()) +
+                theme_classic()
+            # if (input$color_by == 'Count') {
+            #     p <- p + scale_fill_gradient(low = '#383663', high = '#605CA8')
+            # } else {
+                p <- p + scale_fill_manual(values = my_colors) + scale_fill_hue(l = 40)
+            # }
+            p
+            
         }
     })
     
